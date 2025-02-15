@@ -220,14 +220,17 @@ export default function CourseTracker() {
     setNewFreeElective({ name: "", credits: "" })
   }
 
-  const setGrade = (courseId: string, grade: number) => {
-    if (grade >= 1.0 && grade <= 4.0) {
-      setGrades(prev => {
-        const newGrades = { ...prev, [courseId]: grade }
-        localStorage.setItem("grades", JSON.stringify(newGrades))
-        return newGrades
-      })
-    }
+  const setGrade = (courseId: string, grade: number | "") => {
+    setGrades(prev => {
+      const newGrades = { ...prev }
+      if (grade === "" || isNaN(grade)) {
+        delete newGrades[courseId]
+      } else if (grade >= 1.0 && grade <= 4.0) {
+        newGrades[courseId] = grade
+      }
+      localStorage.setItem("grades", JSON.stringify(newGrades))
+      return newGrades
+    })
   }
 
   const calculateWeightedGrade = () => {
@@ -356,7 +359,7 @@ export default function CourseTracker() {
                     step="0.1"
                     placeholder="Grade (1.0-4.0)"
                     value={grades[course.id] || ""}
-                    onChange={(e) => setGrade(course.id, parseFloat(e.target.value))}
+                    onChange={(e) => setGrade(course.id, e.target.value ? parseFloat(e.target.value) : "")}
                     className="mt-2 w-full"
                   />
                 )}
@@ -398,7 +401,7 @@ export default function CourseTracker() {
                           step="0.1"
                           placeholder="Grade"
                           value={grades[course.id] || ""}
-                          onChange={(e) => setGrade(course.id, parseFloat(e.target.value))}
+                          onChange={(e) => setGrade(course.id, e.target.value ? parseFloat(e.target.value) : "")}
                           className="w-20 font-bold"
                         />
                         <Button 
