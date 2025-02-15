@@ -14,7 +14,7 @@ interface Course {
   id: string
   name: string
   credits: number
-  category: "foundation" | "neuro" | "philosophy" | "biology"
+  category: "foundation" | "cs" | "math" | "ai" | "philosophy" | "psychology"
   required?: boolean
   options?: number
   totalInGroup?: number
@@ -24,14 +24,14 @@ interface Course {
 const courses: Course[] = [
   { id: "cog", name: "Foundation of Cognitive Science", credits: 3, category: "foundation", required: true },
   { id: "stats", name: "Intro to Statistics and Data Analysis", credits: 8, category: "foundation", required: true },
-  { id: "cs", name: "Introduction to Computer Science", credits: 9, category: "foundation", required: true },
-  { id: "math", name: "Intro to Mathematics", credits: 9, category: "foundation", required: true },
-  { id: "neuroinfo", name: "Introduction to Neuroinformatics", credits: 8, category: "neuro", required: true },
+  { id: "cs", name: "Introduction to Computer Science", credits: 9, category: "cs", required: true },
+  { id: "math", name: "Intro to Mathematics", credits: 9, category: "math", required: true },
+  { id: "neuroinfo", name: "Introduction to Neuroinformatics", credits: 8, category: "ai", required: true },
   {
     id: "ai",
     name: "Introduction to Cognition in Artificial Systems",
     credits: 8,
-    category: "neuro",
+    category: "ai",
     options: 1,
     totalInGroup: 2,
   },
@@ -48,7 +48,7 @@ const courses: Course[] = [
     id: "neurosci1",
     name: "Introduction to Neuroscience I",
     credits: 4,
-    category: "biology",
+    category: "psychology",
     options: 2,
     totalInGroup: 3,
   },
@@ -56,7 +56,7 @@ const courses: Course[] = [
     id: "neurosci2",
     name: "Introduction to Neuroscience II",
     credits: 4,
-    category: "biology",
+    category: "psychology",
     options: 2,
     totalInGroup: 3,
   },
@@ -64,7 +64,7 @@ const courses: Course[] = [
     id: "biosys1",
     name: "Introduction to Cognition in Biological Systems I",
     credits: 4,
-    category: "biology",
+    category: "psychology",
     options: 2,
     totalInGroup: 3,
   },
@@ -72,7 +72,7 @@ const courses: Course[] = [
     id: "biosys2",
     name: "Introduction to Cognition in Biological Systems II",
     credits: 4,
-    category: "biology",
+    category: "psychology",
     options: 2,
     totalInGroup: 3,
   },
@@ -94,22 +94,27 @@ interface FreeElectiveCourse {
 
 const areaNames = {
   ai: "Artificial Intelligence and Machine Learning",
-  ethics: "Mind, Ethics, and Society",
+  philosophy: "Mind, Ethics, and Society",
   psychology: "Psychology, Communication, Neuroscience, and Behavior",
   cs: "Computer Science",
-  math: "Mathematics"
+  math: "Mathematics",
+  foundation: "Foundation"
 }
 
 const getCategoryColor = (category: Course["category"]) => {
   switch (category) {
     case "foundation":
       return "border-purple-500"
-    case "neuro":
+    case "ai":
       return "border-blue-500"
     case "philosophy":
       return "border-green-500"
-    case "biology":
+    case "psychology":
       return "border-yellow-500"
+    case "cs":
+      return "border-orange-500"
+    case "math":
+      return "border-red-500"
     default:
       return ""
   }
@@ -124,7 +129,7 @@ export default function CourseTracker() {
     credits: string;
     area: keyof typeof areaNames;
   }>({ name: "", credits: "", area: "ai" })
-  const [newFreeElective, setNewFreeElective] = useState({ name: "", credits: "" } as const)
+  const [newFreeElective, setNewFreeElective] = useState({ name: "", credits: "" })
   const [grades, setGrades] = useState<Record<string, number>>({})
 
   const toggleCourse = (courseId: string) => {
@@ -135,7 +140,8 @@ export default function CourseTracker() {
     })
   }
 
-  const calculateAreaProgress = (area: "ai" | "ethics" | "psychology" | "cs" | "math") => {
+  const calculateAreaProgress = (area: keyof typeof areaNames) => {
+    if (area === "foundation") return 0;
     return electiveCourses.filter((course) => course.area === area).reduce((sum, course) => sum + course.credits, 0)
   }
 
@@ -252,8 +258,9 @@ export default function CourseTracker() {
       : 0
     let totalCredits = statsCourse && grades[statsCourse.id] ? statsCourse.credits : 0
 
-    // Get areas sorted by credit count (excluding CS and Math)
+    // Get areas sorted by credit count (excluding CS and Math and Foundation)
     const areaCredits = (Object.keys(areaNames) as Array<keyof typeof areaNames>)
+      .filter(area => area !== "cs" && area !== "math" && area !== "foundation")
       .map(area => ({
         area,
         credits: calculateAreaProgress(area)
@@ -265,7 +272,10 @@ export default function CourseTracker() {
 
     // Add grades from elective courses in top areas
     electiveCourses
-      .filter(course => topAreas.includes(course.area as any) && grades[course.id])
+      .filter(course => 
+        topAreas.includes(course.area as "ai" | "philosophy" | "psychology") && 
+        grades[course.id]
+      )
       .forEach(course => {
         weightedSum += course.credits * (grades[course.id] || 0)
         totalCredits += course.credits
@@ -316,8 +326,11 @@ export default function CourseTracker() {
     // Add grades from mandatory courses in matching categories
     const categoryMapping = {
       ai: ["neuro"],
-      ethics: ["philosophy"],
-      psychology: ["biology"]
+      philosophy: ["philosophy"],
+      psychology: ["biology"],
+      cs: ["cs"],
+      math: ["math"],
+      foundation: ["foundation"]
     }
 
     courses
@@ -506,8 +519,8 @@ export default function CourseTracker() {
                 </Label>
               </div>
               <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
-                   onClick={() => setNewCourse({ ...newCourse, area: "ethics" })}>
-                <RadioGroupItem value="ethics" id="ethics" />
+                   onClick={() => setNewCourse({ ...newCourse, area: "philosophy" })}>
+                <RadioGroupItem value="philosophy" id="philosophy" />
                 <Label  className="flex-grow cursor-pointer">
                   Mind, Ethics, and Society
                 </Label>
