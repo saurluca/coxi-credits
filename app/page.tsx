@@ -253,19 +253,19 @@ export default function CourseTracker() {
     let totalCredits = statsCourse && grades[statsCourse.id] ? statsCourse.credits : 0
 
     // Get areas sorted by credit count (excluding CS and Math)
-    const areaCredits = (["ai", "ethics", "psychology"] as const)
+    const areaCredits = (Object.keys(areaNames) as Array<keyof typeof areaNames>)
       .map(area => ({
         area,
         credits: calculateAreaProgress(area)
       }))
       .sort((a, b) => b.credits - a.credits)
 
-    // Get top 2 areas from the main areas (excluding CS and Math)
+    // Get top 2 areas
     const topAreas = areaCredits.slice(0, 2).map(a => a.area)
 
     // Add grades from elective courses in top areas
     electiveCourses
-      .filter(course => topAreas.includes(course.area) && grades[course.id])
+      .filter(course => topAreas.includes(course.area as any) && grades[course.id])
       .forEach(course => {
         weightedSum += course.credits * (grades[course.id] || 0)
         totalCredits += course.credits
