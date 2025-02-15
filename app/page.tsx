@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+import { Trash2 } from "lucide-react"
 
 interface Course {
   id: string
@@ -154,55 +155,69 @@ export default function CourseTracker() {
   const electiveProgress = (totalElectiveCredits / 60) * 100
 
   const totalFreeElectiveCredits = freeElectiveCourses.reduce((sum, course) => sum + course.credits, 0)
-  const freeElectiveProgress = (totalFreeElectiveCredits / 30) * 100
+  const freeElectiveProgress = (totalFreeElectiveCredits / 33) * 100
 
   const totalCompletedCredits = completedMandatoryCredits + totalElectiveCredits + totalFreeElectiveCredits
-  const totalRequiredCredits = totalMandatoryCredits + 60 + 30 // 60 for mandatory electives and 30 for free electives
+  const totalRequiredCredits = totalMandatoryCredits + 60 + 33 // 60 for mandatory electives and 33 for free electives
   const overallProgress = (totalCompletedCredits / totalRequiredCredits) * 100
 
   const addElectiveCourse = () => {
-    if (newCourse.name && newCourse.credits) {
-      const newCredits = Number.parseInt(newCourse.credits)
-      const areaCredits = calculateAreaProgress(newCourse.area as "ai" | "ethics" | "psychology")
-      
-      if (areaCredits + newCredits > 48) {
-        alert(`Cannot add course. Maximum of 48 ECTS credits allowed per area. Current credits in ${areaNames[newCourse.area]}: ${areaCredits}`)
-        return
+    if (!newCourse.name || !newCourse.credits) {
+      if (!newCourse.name) {
+        alert("Please enter a course name")
+      } else if (!newCourse.credits) {
+        alert("Please enter the number of credits")
       }
-
-      setElectiveCourses((prev) => {
-        const newElectiveCourses = [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            name: newCourse.name,
-            credits: newCredits,
-            area: newCourse.area as "ai" | "ethics" | "psychology",
-          },
-        ]
-        localStorage.setItem("electiveCourses", JSON.stringify(newElectiveCourses))
-        return newElectiveCourses
-      })
-      setNewCourse({ name: "", credits: "", area: "ai" })
+      return
     }
+
+    const newCredits = Number.parseInt(newCourse.credits)
+    const areaCredits = calculateAreaProgress(newCourse.area as "ai" | "ethics" | "psychology")
+    
+    if (areaCredits + newCredits > 48) {
+      alert(`Cannot add course. Maximum of 48 ECTS credits allowed per area. Current credits in ${areaNames[newCourse.area]}: ${areaCredits}`)
+      return
+    }
+
+    setElectiveCourses((prev) => {
+      const newElectiveCourses = [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          name: newCourse.name,
+          credits: newCredits,
+          area: newCourse.area as "ai" | "ethics" | "psychology",
+        },
+      ]
+      localStorage.setItem("electiveCourses", JSON.stringify(newElectiveCourses))
+      return newElectiveCourses
+    })
+    setNewCourse({ name: "", credits: "", area: "ai" })
   }
 
   const addFreeElectiveCourse = () => {
-    if (newFreeElective.name && newFreeElective.credits) {
-      setFreeElectiveCourses((prev) => {
-        const newFreeElectiveCourses = [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            name: newFreeElective.name,
-            credits: Number.parseInt(newFreeElective.credits),
-          },
-        ]
-        localStorage.setItem("freeElectiveCourses", JSON.stringify(newFreeElectiveCourses))
-        return newFreeElectiveCourses
-      })
-      setNewFreeElective({ name: "", credits: "" })
+    if (!newFreeElective.name || !newFreeElective.credits) {
+      if (!newFreeElective.name) {
+        alert("Please enter a course name")
+      } else if (!newFreeElective.credits) {
+        alert("Please enter the number of credits")
+      }
+      return
     }
+
+    setFreeElectiveCourses((prev) => {
+      const newFreeElectiveCourses = [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          name: newFreeElective.name,
+          credits: Number.parseInt(newFreeElective.credits),
+        },
+      ]
+      localStorage.setItem("freeElectiveCourses", JSON.stringify(newFreeElectiveCourses))
+      return newFreeElectiveCourses
+    })
+    setNewFreeElective({ name: "", credits: "" })
   }
 
   const setGrade = (courseId: string, grade: number) => {
@@ -263,6 +278,29 @@ export default function CourseTracker() {
     return totalCredits > 0 
       ? Number((weightedSum / totalCredits).toFixed(2))
       : null
+  }
+
+  const removeElectiveCourse = (courseId: string) => {
+    setElectiveCourses((prev) => {
+      const newElectiveCourses = prev.filter((course) => course.id !== courseId)
+      localStorage.setItem("electiveCourses", JSON.stringify(newElectiveCourses))
+      return newElectiveCourses
+    })
+    // Also remove the grade when removing the course
+    setGrades((prev) => {
+      const newGrades = { ...prev }
+      delete newGrades[courseId]
+      localStorage.setItem("grades", JSON.stringify(newGrades))
+      return newGrades
+    })
+  }
+
+  const removeFreeElectiveCourse = (courseId: string) => {
+    setFreeElectiveCourses((prev) => {
+      const newFreeElectiveCourses = prev.filter((course) => course.id !== courseId)
+      localStorage.setItem("freeElectiveCourses", JSON.stringify(newFreeElectiveCourses))
+      return newFreeElectiveCourses
+    })
   }
 
   return (
@@ -361,8 +399,15 @@ export default function CourseTracker() {
                           placeholder="Grade"
                           value={grades[course.id] || ""}
                           onChange={(e) => setGrade(course.id, parseFloat(e.target.value))}
-                          className="w-24"
+                          className="w-20 font-bold"
                         />
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => removeElectiveCourse(course.id)}
+                        >
+                          <Trash2 />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -388,18 +433,28 @@ export default function CourseTracker() {
             <RadioGroup
               value={newCourse.area}
               onValueChange={(value) => setNewCourse({ ...newCourse, area: value as "ai" | "ethics" | "psychology" })}
+              className="gap-2"
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
+                   onClick={() => setNewCourse({ ...newCourse, area: "ai" })}>
                 <RadioGroupItem value="ai" id="ai" />
-                <Label htmlFor="ai">AI & ML</Label>
+                <Label className="flex-grow cursor-pointer">
+                  Artificial Intelligence and Machine Learning
+                </Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
+                   onClick={() => setNewCourse({ ...newCourse, area: "ethics" })}>
                 <RadioGroupItem value="ethics" id="ethics" />
-                <Label htmlFor="ethics">Ethics & Society</Label>
+                <Label  className="flex-grow cursor-pointer">
+                  Mind, Ethics, and Society
+                </Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
+                   onClick={() => setNewCourse({ ...newCourse, area: "psychology" })}>
                 <RadioGroupItem value="psychology" id="psychology" />
-                <Label htmlFor="psychology">Psychology & Neuroscience</Label>
+                <Label className="flex-grow cursor-pointer">
+                  Psychology, Communication, Neuroscience, and Behavior
+                </Label>
               </div>
             </RadioGroup>
             <Button onClick={addElectiveCourse}>Add Elective Course</Button>
@@ -408,11 +463,11 @@ export default function CourseTracker() {
       </div>
 
       <div className="bg-green-100 p-6 rounded-lg border border-green-200">
-        <h2 className="text-xl font-semibold text-center mb-4">Free Electives (30 ECTS possible)</h2>
+        <h2 className="text-xl font-semibold text-center mb-4">Free Electives (33 ECTS possible)</h2>
         <div className="space-y-2">
           <Progress value={freeElectiveProgress} className="h-2" />
           <p className="text-sm text-center text-gray-600">
-            {totalFreeElectiveCredits} of 30 ECTS completed ({Math.round(freeElectiveProgress)}%)
+            {totalFreeElectiveCredits} of 33 ECTS completed ({Math.round(freeElectiveProgress)}%)
           </p>
         </div>
 
@@ -420,7 +475,16 @@ export default function CourseTracker() {
           {freeElectiveCourses.map((course) => (
             <div key={course.id} className="flex justify-between items-center bg-white p-2 rounded">
               <span>{course.name}</span>
-              <span>{course.credits} ECTS</span>
+              <div className="flex items-center gap-2">
+                <span>{course.credits} ECTS</span>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => removeFreeElectiveCourse(course.id)}
+                >
+                  Remove
+                </Button>
+              </div>
             </div>
           ))}
         </div>
