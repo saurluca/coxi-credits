@@ -82,7 +82,7 @@ interface ElectiveCourse {
   id: string
   name: string
   credits: number
-  area: "ai" | "ethics" | "psychology"
+  area: "ai" | "ethics" | "psychology" | "cs" | "math"
   grade?: number
 }
 
@@ -96,6 +96,8 @@ const areaNames = {
   ai: "Artificial Intelligence and Machine Learning",
   ethics: "Mind, Ethics, and Society",
   psychology: "Psychology, Communication, Neuroscience, and Behavior",
+  cs: "Computer Science",
+  math: "Mathematics"
 }
 
 const getCategoryColor = (category: Course["category"]) => {
@@ -129,7 +131,7 @@ export default function CourseTracker() {
     })
   }
 
-  const calculateAreaProgress = (area: "ai" | "ethics" | "psychology") => {
+  const calculateAreaProgress = (area: "ai" | "ethics" | "psychology" | "cs" | "math") => {
     return electiveCourses.filter((course) => course.area === area).reduce((sum, course) => sum + course.credits, 0)
   }
 
@@ -172,10 +174,15 @@ export default function CourseTracker() {
     }
 
     const newCredits = Number.parseInt(newCourse.credits)
-    const areaCredits = calculateAreaProgress(newCourse.area as "ai" | "ethics" | "psychology")
+    const areaCredits = calculateAreaProgress(newCourse.area as keyof typeof areaNames)
     
-    if (areaCredits + newCredits > 48) {
-      alert(`Cannot add course. Maximum of 48 ECTS credits allowed per area. Current credits in ${areaNames[newCourse.area]}: ${areaCredits}`)
+    // Check credit limits based on area
+    const maxCredits = newCourse.area === "cs" || newCourse.area === "math" 
+      ? 9 
+      : 48
+
+    if (areaCredits + newCredits > maxCredits) {
+      alert(`Cannot add course. Maximum of ${maxCredits} ECTS credits allowed for ${areaNames[newCourse.area]}. Current credits: ${areaCredits}`)
       return
     }
 
@@ -186,7 +193,7 @@ export default function CourseTracker() {
           id: crypto.randomUUID(),
           name: newCourse.name,
           credits: newCredits,
-          area: newCourse.area as "ai" | "ethics" | "psychology",
+          area: newCourse.area as keyof typeof areaNames,
         },
       ]
       localStorage.setItem("electiveCourses", JSON.stringify(newElectiveCourses))
@@ -241,15 +248,15 @@ export default function CourseTracker() {
       : 0
     let totalCredits = statsCourse && grades[statsCourse.id] ? statsCourse.credits : 0
 
-    // Get areas sorted by credit count
-    const areaCredits = (Object.keys(areaNames) as Array<"ai" | "ethics" | "psychology">)
+    // Get areas sorted by credit count (excluding CS and Math)
+    const areaCredits = (["ai", "ethics", "psychology"] as const)
       .map(area => ({
         area,
         credits: calculateAreaProgress(area)
       }))
       .sort((a, b) => b.credits - a.credits)
 
-    // Get top 2 areas
+    // Get top 2 areas from the main areas (excluding CS and Math)
     const topAreas = areaCredits.slice(0, 2).map(a => a.area)
 
     // Add grades from elective courses in top areas
@@ -259,6 +266,48 @@ export default function CourseTracker() {
         weightedSum += course.credits * (grades[course.id] || 0)
         totalCredits += course.credits
       })
+
+    // Handle CS courses (max 9 credits)
+    const csElectives = electiveCourses
+      .filter(course => course.area === "cs")
+      .sort((a, b) => (grades[b.id] || 0) - (grades[a.id] || 0)) // Sort by grades to take best ones
+    const csCourse = courses.find(c => c.id === "cs")
+    
+    let csCredits = 0
+    if (csElectives.length > 0 && csCourse && grades[csCourse.id]) {
+      weightedSum += csCourse.credits * grades[csCourse.id]
+      totalCredits += csCourse.credits
+      
+      // Add elective grades up to 9 credits
+      for (const course of csElectives) {
+        if (grades[course.id] && csCredits + course.credits <= 9) {
+          weightedSum += course.credits * grades[course.id]
+          totalCredits += course.credits
+          csCredits += course.credits
+        }
+      }
+    }
+
+    // Handle Math courses (max 9 credits)
+    const mathElectives = electiveCourses
+      .filter(course => course.area === "math")
+      .sort((a, b) => (grades[b.id] || 0) - (grades[a.id] || 0)) // Sort by grades to take best ones
+    const mathCourse = courses.find(c => c.id === "math")
+    
+    let mathCredits = 0
+    if (mathElectives.length > 0 && mathCourse && grades[mathCourse.id]) {
+      weightedSum += mathCourse.credits * grades[mathCourse.id]
+      totalCredits += mathCourse.credits
+      
+      // Add elective grades up to 9 credits
+      for (const course of mathElectives) {
+        if (grades[course.id] && mathCredits + course.credits <= 9) {
+          weightedSum += course.credits * grades[course.id]
+          totalCredits += course.credits
+          mathCredits += course.credits
+        }
+      }
+    }
 
     // Add grades from mandatory courses in matching categories
     const categoryMapping = {
@@ -378,45 +427,52 @@ export default function CourseTracker() {
         </div>
 
         <div className="mt-4 space-y-4">
-          {(Object.keys(areaNames) as Array<"ai" | "ethics" | "psychology">).map((area) => (
-            <div key={area} className="space-y-2">
-              <h3 className="font-medium">{areaNames[area]}</h3>
-              <Progress value={(calculateAreaProgress(area) / 48) * 100} className="h-2" />
-              <p className="text-sm text-gray-600">
-                {calculateAreaProgress(area)} of 48 ECTS completed 
-                {calculateAreaProgress(area) > 0 && ` (${Math.round((calculateAreaProgress(area) / 48) * 100)}%)`}
-              </p>
-              <div className="space-y-2">
-                {electiveCourses
-                  .filter((course) => course.area === area)
-                  .map((course) => (
-                    <div key={course.id} className="flex justify-between items-center bg-white p-2 rounded">
-                      <span>{course.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span>{course.credits} ECTS</span>
-                        <Input
-                          type="number"
-                          min="1.0"
-                          max="4.0"
-                          step="0.1"
-                          placeholder="Grade"
-                          value={grades[course.id] || ""}
-                          onChange={(e) => setGrade(course.id, e.target.value ? parseFloat(e.target.value) : "")}
-                          className="w-20 font-bold"
-                        />
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => removeElectiveCourse(course.id)}
-                        >
-                          <Trash2 />
-                        </Button>
+          {(Object.keys(areaNames) as Array<keyof typeof areaNames>).map((area) => {
+            // Calculate max credits and progress based on area
+            const maxCredits = area === "cs" || area === "math" ? 9 : 48;
+            const areaProgress = calculateAreaProgress(area);
+            const progressPercentage = (areaProgress / maxCredits) * 100;
+
+            return (
+              <div key={area} className="space-y-2">
+                <h3 className="font-medium">{areaNames[area]}</h3>
+                <Progress value={progressPercentage} className="h-2" />
+                <p className="text-sm text-gray-600">
+                  {areaProgress} of {maxCredits} ECTS completed 
+                  {areaProgress > 0 && ` (${Math.round(progressPercentage)}%)`}
+                </p>
+                <div className="space-y-2">
+                  {electiveCourses
+                    .filter((course) => course.area === area)
+                    .map((course) => (
+                      <div key={course.id} className="flex justify-between items-center bg-white p-2 rounded">
+                        <span>{course.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span>{course.credits} ECTS</span>
+                          <Input
+                            type="number"
+                            min="1.0"
+                            max="4.0"
+                            step="0.1"
+                            placeholder="Grade"
+                            value={grades[course.id] || ""}
+                            onChange={(e) => setGrade(course.id, e.target.value ? parseFloat(e.target.value) : "")}
+                            className="w-20 font-bold"
+                          />
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => removeElectiveCourse(course.id)}
+                          >
+                            <Trash2 />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="mt-6 space-y-2">
@@ -435,7 +491,7 @@ export default function CourseTracker() {
             />
             <RadioGroup
               value={newCourse.area}
-              onValueChange={(value) => setNewCourse({ ...newCourse, area: value as "ai" | "ethics" | "psychology" })}
+              onValueChange={(value) => setNewCourse({ ...newCourse, area: value as keyof typeof areaNames })}
               className="gap-2"
             >
               <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
@@ -457,6 +513,20 @@ export default function CourseTracker() {
                 <RadioGroupItem value="psychology" id="psychology" />
                 <Label className="flex-grow cursor-pointer">
                   Psychology, Communication, Neuroscience, and Behavior
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
+                   onClick={() => setNewCourse({ ...newCourse, area: "cs" })}>
+                <RadioGroupItem value="cs" id="cs" />
+                <Label className="flex-grow cursor-pointer">
+                  Computer Science
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
+                   onClick={() => setNewCourse({ ...newCourse, area: "math" })}>
+                <RadioGroupItem value="math" id="math" />
+                <Label className="flex-grow cursor-pointer">
+                  Mathematics
                 </Label>
               </div>
             </RadioGroup>
