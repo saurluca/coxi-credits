@@ -17,6 +17,7 @@ interface Course {
   required?: boolean
   options?: number
   totalInGroup?: number
+  grade?: number
 }
 
 const courses: Course[] = [
@@ -81,6 +82,7 @@ interface ElectiveCourse {
   name: string
   credits: number
   area: "ai" | "ethics" | "psychology"
+  grade?: number
 }
 
 interface FreeElectiveCourse {
@@ -116,6 +118,7 @@ export default function CourseTracker() {
   const [freeElectiveCourses, setFreeElectiveCourses] = useState<FreeElectiveCourse[]>([])
   const [newCourse, setNewCourse] = useState({ name: "", credits: "", area: "ai" } as const)
   const [newFreeElective, setNewFreeElective] = useState({ name: "", credits: "" } as const)
+  const [grades, setGrades] = useState<Record<string, number>>({})
 
   const toggleCourse = (courseId: string) => {
     setCompletedCourses((prev) => {
@@ -133,10 +136,12 @@ export default function CourseTracker() {
     const savedCompletedCourses = localStorage.getItem("completedCourses")
     const savedElectiveCourses = localStorage.getItem("electiveCourses")
     const savedFreeElectiveCourses = localStorage.getItem("freeElectiveCourses")
+    const savedGrades = localStorage.getItem("grades")
 
     if (savedCompletedCourses) setCompletedCourses(JSON.parse(savedCompletedCourses))
     if (savedElectiveCourses) setElectiveCourses(JSON.parse(savedElectiveCourses))
     if (savedFreeElectiveCourses) setFreeElectiveCourses(JSON.parse(savedFreeElectiveCourses))
+    if (savedGrades) setGrades(JSON.parse(savedGrades))
   }, [])
 
   const totalMandatoryCredits = courses.reduce((sum, course) => sum + course.credits, 0)
@@ -200,6 +205,66 @@ export default function CourseTracker() {
     }
   }
 
+  const setGrade = (courseId: string, grade: number) => {
+    if (grade >= 1.0 && grade <= 4.0) {
+      setGrades(prev => {
+        const newGrades = { ...prev, [courseId]: grade }
+        localStorage.setItem("grades", JSON.stringify(newGrades))
+        return newGrades
+      })
+    }
+  }
+
+  const calculateWeightedGrade = () => {
+    // Always include Statistics
+    const statsCourse = courses.find(c => c.id === "stats")
+    let weightedSum = statsCourse && grades[statsCourse.id] 
+      ? statsCourse.credits * grades[statsCourse.id]
+      : 0
+    let totalCredits = statsCourse && grades[statsCourse.id] ? statsCourse.credits : 0
+
+    // Get areas sorted by credit count
+    const areaCredits = (Object.keys(areaNames) as Array<"ai" | "ethics" | "psychology">)
+      .map(area => ({
+        area,
+        credits: calculateAreaProgress(area)
+      }))
+      .sort((a, b) => b.credits - a.credits)
+
+    // Get top 2 areas
+    const topAreas = areaCredits.slice(0, 2).map(a => a.area)
+
+    // Add grades from elective courses in top areas
+    electiveCourses
+      .filter(course => topAreas.includes(course.area) && grades[course.id])
+      .forEach(course => {
+        weightedSum += course.credits * (grades[course.id] || 0)
+        totalCredits += course.credits
+      })
+
+    // Add grades from mandatory courses in matching categories
+    const categoryMapping = {
+      ai: ["neuro"],
+      ethics: ["philosophy"],
+      psychology: ["biology"]
+    }
+
+    courses
+      .filter(course => 
+        topAreas.some(area => 
+          categoryMapping[area]?.includes(course.category)
+        ) && grades[course.id]
+      )
+      .forEach(course => {
+        weightedSum += course.credits * (grades[course.id] || 0)
+        totalCredits += course.credits
+      })
+
+    return totalCredits > 0 
+      ? Number((weightedSum / totalCredits).toFixed(2))
+      : null
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-8">
       <div className="bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-lg border border-purple-200">
@@ -208,6 +273,11 @@ export default function CourseTracker() {
         <p className="text-lg text-center mt-2">
           {totalCompletedCredits} of {totalRequiredCredits} ECTS completed ({Math.round(overallProgress)}%)
         </p>
+        {calculateWeightedGrade() && (
+          <p className="text-lg text-center mt-2 font-semibold">
+            Weighted Grade Average: {calculateWeightedGrade()}
+          </p>
+        )}
       </div>
 
       <div className="bg-green-100 p-6 rounded-lg border border-green-200">
@@ -224,8 +294,7 @@ export default function CourseTracker() {
         {courses.map((course) => (
           <Card 
             key={course.id} 
-            className={`p-4 border-2 ${getCategoryColor(course.category)} cursor-pointer`}
-            onClick={() => toggleCourse(course.id)}
+            className={`p-4 border-2 ${getCategoryColor(course.category)}`}
           >
             <div className="flex items-start gap-3">
               <Checkbox
@@ -233,17 +302,26 @@ export default function CourseTracker() {
                 checked={completedCourses.includes(course.id)}
                 onCheckedChange={() => toggleCourse(course.id)}
               />
-              <div className="space-y-1">
-                <label
-                  htmlFor={course.id}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
+              <div className="space-y-1 flex-1">
+                <label htmlFor={course.id} className="text-sm font-medium leading-none">
                   {course.name}
                 </label>
                 <p className="text-sm text-gray-500">
                   {course.credits} ECTS
                   {course.options && ` (${course.options} out of ${course.totalInGroup} courses)`}
                 </p>
+                {completedCourses.includes(course.id) && (
+                  <Input
+                    type="number"
+                    min="1.0"
+                    max="4.0"
+                    step="0.1"
+                    placeholder="Grade (1.0-4.0)"
+                    value={grades[course.id] || ""}
+                    onChange={(e) => setGrade(course.id, parseFloat(e.target.value))}
+                    className="mt-2 w-full"
+                  />
+                )}
               </div>
             </div>
           </Card>
@@ -273,7 +351,19 @@ export default function CourseTracker() {
                   .map((course) => (
                     <div key={course.id} className="flex justify-between items-center bg-white p-2 rounded">
                       <span>{course.name}</span>
-                      <span>{course.credits} ECTS</span>
+                      <div className="flex items-center gap-2">
+                        <span>{course.credits} ECTS</span>
+                        <Input
+                          type="number"
+                          min="1.0"
+                          max="4.0"
+                          step="0.1"
+                          placeholder="Grade"
+                          value={grades[course.id] || ""}
+                          onChange={(e) => setGrade(course.id, parseFloat(e.target.value))}
+                          className="w-24"
+                        />
+                      </div>
                     </div>
                   ))}
               </div>
