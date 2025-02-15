@@ -110,10 +110,6 @@ const getCategoryColor = (category: Course["category"]) => {
   }
 }
 
-const generateId = () => {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2)
-}
-
 export default function CourseTracker() {
   const [completedCourses, setCompletedCourses] = useState<string[]>([])
   const [electiveCourses, setElectiveCourses] = useState<ElectiveCourse[]>([])
@@ -161,13 +157,21 @@ export default function CourseTracker() {
 
   const addElectiveCourse = () => {
     if (newCourse.name && newCourse.credits) {
+      const newCredits = Number.parseInt(newCourse.credits)
+      const areaCredits = calculateAreaProgress(newCourse.area as "ai" | "ethics" | "psychology")
+      
+      if (areaCredits + newCredits > 48) {
+        alert(`Cannot add course. Maximum of 48 ECTS credits allowed per area. Current credits in ${areaNames[newCourse.area]}: ${areaCredits}`)
+        return
+      }
+
       setElectiveCourses((prev) => {
         const newElectiveCourses = [
           ...prev,
           {
-            id: generateId(),
+            id: crypto.randomUUID(),
             name: newCourse.name,
-            credits: Number.parseInt(newCourse.credits),
+            credits: newCredits,
             area: newCourse.area as "ai" | "ethics" | "psychology",
           },
         ]
@@ -184,7 +188,7 @@ export default function CourseTracker() {
         const newFreeElectiveCourses = [
           ...prev,
           {
-            id: generateId(),
+            id: crypto.randomUUID(),
             name: newFreeElective.name,
             credits: Number.parseInt(newFreeElective.credits),
           },
@@ -258,8 +262,11 @@ export default function CourseTracker() {
           {(Object.keys(areaNames) as Array<"ai" | "ethics" | "psychology">).map((area) => (
             <div key={area} className="space-y-2">
               <h3 className="font-medium">{areaNames[area]}</h3>
-              <Progress value={(calculateAreaProgress(area) / 60) * 100} className="h-2" />
-              <p className="text-sm text-gray-600">{calculateAreaProgress(area)} ECTS completed</p>
+              <Progress value={(calculateAreaProgress(area) / 48) * 100} className="h-2" />
+              <p className="text-sm text-gray-600">
+                {calculateAreaProgress(area)} of 48 ECTS completed 
+                {calculateAreaProgress(area) > 0 && ` (${Math.round((calculateAreaProgress(area) / 48) * 100)}%)`}
+              </p>
               <div className="space-y-2">
                 {electiveCourses
                   .filter((course) => course.area === area)
