@@ -82,7 +82,7 @@ interface ElectiveCourse {
   id: string
   name: string
   credits: number
-  area: "ai" | "ethics" | "psychology" | "cs" | "math"
+  area: keyof typeof areaNames
   grade?: number
 }
 
@@ -119,7 +119,11 @@ export default function CourseTracker() {
   const [completedCourses, setCompletedCourses] = useState<string[]>([])
   const [electiveCourses, setElectiveCourses] = useState<ElectiveCourse[]>([])
   const [freeElectiveCourses, setFreeElectiveCourses] = useState<FreeElectiveCourse[]>([])
-  const [newCourse, setNewCourse] = useState({ name: "", credits: "", area: "ai" } as const)
+  const [newCourse, setNewCourse] = useState<{
+    name: string;
+    credits: string;
+    area: keyof typeof areaNames;
+  }>({ name: "", credits: "", area: "ai" })
   const [newFreeElective, setNewFreeElective] = useState({ name: "", credits: "" } as const)
   const [grades, setGrades] = useState<Record<string, number>>({})
 
