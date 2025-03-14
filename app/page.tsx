@@ -185,11 +185,20 @@ export default function CourseTracker() {
 
     const newCredits = Number.parseInt(newCourse.credits)
     const areaCredits = calculateAreaProgress(newCourse.area as keyof typeof areaNames)
-    
+
     // Check credit limits based on area
-    const maxCredits = newCourse.area === "cs" || newCourse.area === "math" 
-      ? 9 
-      : 48
+    let maxCredits;
+    switch (newCourse.area) {
+      case "foundation":
+        maxCredits = 4;
+        break;
+      case "cs":
+      case "math":
+        maxCredits = 9;
+        break;
+      default:
+        maxCredits = 48;
+    }
 
     if (areaCredits + newCredits > maxCredits) {
       alert(`Cannot add course. Maximum of ${maxCredits} ECTS credits allowed for ${areaNames[newCourse.area]}. Current credits: ${areaCredits}`)
@@ -250,103 +259,85 @@ export default function CourseTracker() {
     })
   }
 
+  // Category mapping for grade calculation
+  const categoryMapping = {
+    ai: ["ai"],
+    philosophy: ["philosophy"],
+    psychology: ["psychology"],
+    cs: ["cs"],
+    math: ["math"],
+    foundation: ["foundation"]
+  }
+
   const calculateWeightedGrade = () => {
+    let weightedSum = 0;
+    let totalCredits = 0;
+
+    // Step 1: Include all elective courses in the grade calculation
+    electiveCourses.forEach(course => {
+      if (grades[course.id]) {
+        weightedSum += course.credits * grades[course.id];
+        totalCredits += course.credits;
+      }
+    });
+
+    // Step 2: Calculate which areas have the most credits in electives
+    // (for AI, Philosophy, Psychology categories)
+    const areaCredits = {
+      ai: calculateAreaProgress("ai"),
+      philosophy: calculateAreaProgress("philosophy"),
+      psychology: calculateAreaProgress("psychology")
+    };
+
+    // Sort areas by credit count to find top 2
+    const topAreas = Object.entries(areaCredits)
+      .sort(([, creditsA], [, creditsB]) => creditsB - creditsA)
+      .slice(0, 2)
+      .map(([area]) => area);
+
+    // Step 3: Handle mandatory courses according to rules
+
     // Always include Statistics
-    const statsCourse = courses.find(c => c.id === "stats")
-    let weightedSum = statsCourse && grades[statsCourse.id] 
-      ? statsCourse.credits * grades[statsCourse.id]
-      : 0
-    let totalCredits = statsCourse && grades[statsCourse.id] ? statsCourse.credits : 0
-
-    // Get areas sorted by credit count (excluding CS and Math and Foundation)
-    const areaCredits = (Object.keys(areaNames) as Array<keyof typeof areaNames>)
-      .filter(area => area !== "cs" && area !== "math" && area !== "foundation")
-      .map(area => ({
-        area,
-        credits: calculateAreaProgress(area)
-      }))
-      .sort((a, b) => b.credits - a.credits)
-
-    // Get top 2 areas
-    const topAreas = areaCredits.slice(0, 2).map(a => a.area)
-
-    // Add grades from elective courses in top areas
-    electiveCourses
-      .filter(course => 
-        topAreas.includes(course.area as "ai" | "philosophy" | "psychology") && 
-        grades[course.id]
-      )
-      .forEach(course => {
-        weightedSum += course.credits * (grades[course.id] || 0)
-        totalCredits += course.credits
-      })
-
-    // Handle CS courses (max 9 credits)
-    const csElectives = electiveCourses
-      .filter(course => course.area === "cs")
-      .sort((a, b) => (grades[b.id] || 0) - (grades[a.id] || 0)) // Sort by grades to take best ones
-    const csCourse = courses.find(c => c.id === "cs")
-    
-    let csCredits = 0
-    if (csElectives.length > 0 && csCourse && grades[csCourse.id]) {
-      weightedSum += csCourse.credits * grades[csCourse.id]
-      totalCredits += csCourse.credits
-      
-      // Add elective grades up to 9 credits
-      for (const course of csElectives) {
-        if (grades[course.id] && csCredits + course.credits <= 9) {
-          weightedSum += course.credits * grades[course.id]
-          totalCredits += course.credits
-          csCredits += course.credits
-        }
-      }
+    const statsCourse = courses.find(c => c.id === "stats");
+    if (statsCourse && grades[statsCourse.id]) {
+      weightedSum += statsCourse.credits * grades[statsCourse.id];
+      totalCredits += statsCourse.credits;
     }
 
-    // Handle Math courses (max 9 credits)
-    const mathElectives = electiveCourses
-      .filter(course => course.area === "math")
-      .sort((a, b) => (grades[b.id] || 0) - (grades[a.id] || 0)) // Sort by grades to take best ones
-    const mathCourse = courses.find(c => c.id === "math")
-    
-    let mathCredits = 0
+    // Include Math only if a second math course is taken in electives
+    const mathElectives = electiveCourses.filter(course => course.area === "math");
+    const mathCourse = courses.find(c => c.id === "math");
     if (mathElectives.length > 0 && mathCourse && grades[mathCourse.id]) {
-      weightedSum += mathCourse.credits * grades[mathCourse.id]
-      totalCredits += mathCourse.credits
-      
-      // Add elective grades up to 9 credits
-      for (const course of mathElectives) {
-        if (grades[course.id] && mathCredits + course.credits <= 9) {
-          weightedSum += course.credits * grades[course.id]
-          totalCredits += course.credits
-          mathCredits += course.credits
-        }
-      }
+      weightedSum += mathCourse.credits * grades[mathCourse.id];
+      totalCredits += mathCourse.credits;
     }
 
-    // Add grades from mandatory courses in matching categories
-    const categoryMapping = {
-      ai: ["neuro"],
-      philosophy: ["philosophy"],
-      psychology: ["biology"],
-      cs: ["cs"],
-      math: ["math"],
-      foundation: ["foundation"]
+    // Include CS only if a second CS course is taken in electives
+    const csElectives = electiveCourses.filter(course => course.area === "cs");
+    const csCourse = courses.find(c => c.id === "cs");
+    if (csElectives.length > 0 && csCourse && grades[csCourse.id]) {
+      weightedSum += csCourse.credits * grades[csCourse.id];
+      totalCredits += csCourse.credits;
     }
 
+    // For AI, Psychology, Philosophy: only include mandatory courses from top 2 areas
     courses
-      .filter(course => 
-        topAreas.some(area => 
-          categoryMapping[area]?.includes(course.category)
-        ) && grades[course.id]
+      .filter(course =>
+        // Match course category with top areas
+        topAreas.some(area => categoryMapping[area as keyof typeof categoryMapping]?.includes(course.category)) &&
+        // Has a grade
+        grades[course.id] &&
+        // Not Foundation of Cognitive Science (which never has a grade)
+        course.id !== "cog"
       )
       .forEach(course => {
-        weightedSum += course.credits * (grades[course.id] || 0)
-        totalCredits += course.credits
-      })
+        weightedSum += course.credits * grades[course.id];
+        totalCredits += course.credits;
+      });
 
-    return totalCredits > 0 
+    return totalCredits > 0
       ? Number((weightedSum / totalCredits).toFixed(2))
-      : null
+      : null;
   }
 
   const removeElectiveCourse = (courseId: string) => {
@@ -399,8 +390,8 @@ export default function CourseTracker() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {courses.map((course) => (
-          <Card 
-            key={course.id} 
+          <Card
+            key={course.id}
             className={`p-4 border-2 ${getCategoryColor(course.category)}`}
           >
             <div className="flex items-start gap-3">
@@ -455,7 +446,7 @@ export default function CourseTracker() {
                 <h3 className="font-medium">{areaNames[area]}</h3>
                 <Progress value={progressPercentage} className="h-2" />
                 <p className="text-sm text-gray-600">
-                  {areaProgress} of {maxCredits} ECTS completed 
+                  {areaProgress} of {maxCredits} ECTS completed
                   {areaProgress > 0 && ` (${Math.round(progressPercentage)}%)`}
                 </p>
                 <div className="space-y-2">
@@ -476,8 +467,8 @@ export default function CourseTracker() {
                             onChange={(e) => setGrade(course.id, e.target.value ? parseFloat(e.target.value) : "")}
                             className="w-20 font-bold"
                           />
-                          <Button 
-                            variant="destructive" 
+                          <Button
+                            variant="destructive"
                             size="sm"
                             onClick={() => removeElectiveCourse(course.id)}
                           >
@@ -512,35 +503,35 @@ export default function CourseTracker() {
               className="gap-2"
             >
               <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
-                   onClick={() => setNewCourse({ ...newCourse, area: "ai" })}>
+                onClick={() => setNewCourse({ ...newCourse, area: "ai" })}>
                 <RadioGroupItem value="ai" id="ai" />
                 <Label className="flex-grow cursor-pointer">
                   Artificial Intelligence and Machine Learning
                 </Label>
               </div>
               <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
-                   onClick={() => setNewCourse({ ...newCourse, area: "philosophy" })}>
+                onClick={() => setNewCourse({ ...newCourse, area: "philosophy" })}>
                 <RadioGroupItem value="philosophy" id="philosophy" />
-                <Label  className="flex-grow cursor-pointer">
+                <Label className="flex-grow cursor-pointer">
                   Mind, Ethics, and Society
                 </Label>
               </div>
               <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
-                   onClick={() => setNewCourse({ ...newCourse, area: "psychology" })}>
+                onClick={() => setNewCourse({ ...newCourse, area: "psychology" })}>
                 <RadioGroupItem value="psychology" id="psychology" />
                 <Label className="flex-grow cursor-pointer">
                   Psychology, Communication, Neuroscience, and Behavior
                 </Label>
               </div>
               <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
-                   onClick={() => setNewCourse({ ...newCourse, area: "cs" })}>
+                onClick={() => setNewCourse({ ...newCourse, area: "cs" })}>
                 <RadioGroupItem value="cs" id="cs" />
                 <Label className="flex-grow cursor-pointer">
                   Computer Science
                 </Label>
               </div>
               <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
-                   onClick={() => setNewCourse({ ...newCourse, area: "math" })}>
+                onClick={() => setNewCourse({ ...newCourse, area: "math" })}>
                 <RadioGroupItem value="math" id="math" />
                 <Label className="flex-grow cursor-pointer">
                   Mathematics
@@ -567,8 +558,8 @@ export default function CourseTracker() {
               <span>{course.name}</span>
               <div className="flex items-center gap-2">
                 <span>{course.credits} ECTS</span>
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   size="sm"
                   onClick={() => removeFreeElectiveCourse(course.id)}
                 >
