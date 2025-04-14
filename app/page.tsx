@@ -124,6 +124,7 @@ export default function CourseTracker() {
   const [completedCourses, setCompletedCourses] = useState<string[]>([])
   const [electiveCourses, setElectiveCourses] = useState<ElectiveCourse[]>([])
   const [freeElectiveCourses, setFreeElectiveCourses] = useState<FreeElectiveCourse[]>([])
+  const [mathCredits, setMathCredits] = useState<number>(9)
   const [newCourse, setNewCourse] = useState<{
     name: string;
     credits: string;
@@ -150,27 +151,42 @@ export default function CourseTracker() {
     const savedElectiveCourses = localStorage.getItem("electiveCourses")
     const savedFreeElectiveCourses = localStorage.getItem("freeElectiveCourses")
     const savedGrades = localStorage.getItem("grades")
+    const savedMathCredits = localStorage.getItem("mathCredits")
 
     if (savedCompletedCourses) setCompletedCourses(JSON.parse(savedCompletedCourses))
     if (savedElectiveCourses) setElectiveCourses(JSON.parse(savedElectiveCourses))
     if (savedFreeElectiveCourses) setFreeElectiveCourses(JSON.parse(savedFreeElectiveCourses))
     if (savedGrades) setGrades(JSON.parse(savedGrades))
+    if (savedMathCredits) setMathCredits(JSON.parse(savedMathCredits))
   }, [])
 
-  const totalMandatoryCredits = courses.reduce((sum, course) => sum + course.credits, 0)
+  const totalMandatoryCredits = courses.reduce((sum, course) => {
+    // Special handling for math course
+    if (course.id === "math") {
+      return sum + mathCredits
+    }
+    return sum + course.credits
+  }, 0)
   const completedMandatoryCredits = courses
     .filter((course) => completedCourses.includes(course.id))
-    .reduce((sum, course) => sum + course.credits, 0)
+    .reduce((sum: number, course: Course) => {
+      // Special handling for math course
+      if (course.id === "math") {
+        return sum + mathCredits
+      }
+      return sum + course.credits
+    }, 0)
   const mandatoryProgress = (completedMandatoryCredits / totalMandatoryCredits) * 100
 
   const totalElectiveCredits = electiveCourses.reduce((sum, course) => sum + course.credits, 0)
   const electiveProgress = (totalElectiveCredits / 60) * 100
 
+  const maxFreeElectiveCredits = mathCredits === 6 ? 36 : 33
   const totalFreeElectiveCredits = freeElectiveCourses.reduce((sum, course) => sum + course.credits, 0)
-  const freeElectiveProgress = (totalFreeElectiveCredits / 33) * 100
+  const freeElectiveProgress = (totalFreeElectiveCredits / maxFreeElectiveCredits) * 100
 
   const totalCompletedCredits = completedMandatoryCredits + totalElectiveCredits + totalFreeElectiveCredits
-  const totalRequiredCredits = totalMandatoryCredits + 60 + 33 // 60 for mandatory electives and 33 for free electives
+  const totalRequiredCredits = totalMandatoryCredits + 60 + maxFreeElectiveCredits
   const overallProgress = (totalCompletedCredits / totalRequiredCredits) * 100
 
   const addElectiveCourse = () => {
@@ -308,8 +324,8 @@ export default function CourseTracker() {
     const mathElectives = electiveCourses.filter(course => course.area === "math");
     const mathCourse = courses.find(c => c.id === "math");
     if (mathElectives.length > 0 && mathCourse && grades[mathCourse.id]) {
-      weightedSum += mathCourse.credits * grades[mathCourse.id];
-      totalCredits += mathCourse.credits;
+      weightedSum += mathCredits * grades[mathCourse.id];
+      totalCredits += mathCredits;
     }
 
     // Include CS only if a second CS course is taken in electives
@@ -363,6 +379,14 @@ export default function CourseTracker() {
     })
   }
 
+  const toggleMathCredits = () => {
+    setMathCredits((prev) => {
+      const newCredits = prev === 9 ? 6 : 9
+      localStorage.setItem("mathCredits", JSON.stringify(newCredits))
+      return newCredits
+    })
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-8">
       <div className="bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-lg border border-purple-200">
@@ -405,9 +429,21 @@ export default function CourseTracker() {
                   {course.name}
                 </label>
                 <p className="text-sm text-gray-500">
-                  {course.credits} ECTS
+                  {course.id === "math" ? mathCredits : course.credits} ECTS
                   {course.options && ` (${course.options} out of ${course.totalInGroup} courses)`}
                 </p>
+                {course.id === "math" && (
+                  <div className="flex items-center space-x-2 mt-2">
+                    <div
+                      onClick={toggleMathCredits}
+                      className={`w-10 h-5 flex items-center rounded-full p-1 cursor-pointer ${mathCredits === 9 ? "bg-blue-500 justify-end" : "bg-gray-300 justify-start"
+                        }`}
+                    >
+                      <div className="bg-white w-4 h-4 rounded-full shadow-md"></div>
+                    </div>
+                    <span className="text-xs text-gray-600">{mathCredits === 9 ? "9 ECTS" : "6 ECTS"}</span>
+                  </div>
+                )}
                 {completedCourses.includes(course.id) && (
                   <Input
                     type="number"
@@ -544,11 +580,11 @@ export default function CourseTracker() {
       </div>
 
       <div className="bg-green-100 p-6 rounded-lg border border-green-200">
-        <h2 className="text-xl font-semibold text-center mb-4">Free Electives (33 ECTS possible)</h2>
+        <h2 className="text-xl font-semibold text-center mb-4">Free Electives ({maxFreeElectiveCredits} ECTS possible)</h2>
         <div className="space-y-2">
           <Progress value={freeElectiveProgress} className="h-2" />
           <p className="text-sm text-center text-gray-600">
-            {totalFreeElectiveCredits} of 33 ECTS completed ({Math.round(freeElectiveProgress)}%)
+            {totalFreeElectiveCredits} of {maxFreeElectiveCredits} ECTS completed ({Math.round(freeElectiveProgress)}%)
           </p>
         </div>
 
