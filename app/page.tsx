@@ -320,10 +320,10 @@ export default function CourseTracker() {
       totalCredits += statsCourse.credits;
     }
 
-    // Include Math only if a second math course is taken in electives
+    // Include Math only if a second math course is taken in electives and it's the 9-credit version
     const mathElectives = electiveCourses.filter(course => course.area === "math");
     const mathCourse = courses.find(c => c.id === "math");
-    if (mathElectives.length > 0 && mathCourse && grades[mathCourse.id]) {
+    if (mathElectives.length > 0 && mathCourse && grades[mathCourse.id] && mathCredits === 9) {
       weightedSum += mathCredits * grades[mathCourse.id];
       totalCredits += mathCredits;
     }
@@ -383,6 +383,17 @@ export default function CourseTracker() {
     setMathCredits((prev) => {
       const newCredits = prev === 9 ? 6 : 9
       localStorage.setItem("mathCredits", JSON.stringify(newCredits))
+
+      // If switching to 6 credits, remove the grade
+      if (newCredits === 6) {
+        setGrades(prevGrades => {
+          const newGrades = { ...prevGrades }
+          delete newGrades["math"]
+          localStorage.setItem("grades", JSON.stringify(newGrades))
+          return newGrades
+        })
+      }
+
       return newCredits
     })
   }
@@ -445,16 +456,18 @@ export default function CourseTracker() {
                   </div>
                 )}
                 {completedCourses.includes(course.id) && (
-                  <Input
-                    type="number"
-                    min="1.0"
-                    max="4.0"
-                    step="0.1"
-                    placeholder="Grade (1.0-4.0)"
-                    value={grades[course.id] || ""}
-                    onChange={(e) => setGrade(course.id, e.target.value ? parseFloat(e.target.value) : "")}
-                    className="mt-2 w-full"
-                  />
+                  (course.id !== "cog" && !(course.id === "math" && mathCredits === 6)) && (
+                    <Input
+                      type="number"
+                      min="1.0"
+                      max="4.0"
+                      step="0.1"
+                      placeholder="Grade (1.0-4.0)"
+                      value={grades[course.id] || ""}
+                      onChange={(e) => setGrade(course.id, e.target.value ? parseFloat(e.target.value) : "")}
+                      className="mt-2 w-full"
+                    />
+                  )
                 )}
               </div>
             </div>
