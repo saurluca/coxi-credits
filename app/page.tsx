@@ -185,7 +185,11 @@ export default function CourseTracker() {
   const totalFreeElectiveCredits = freeElectiveCourses.reduce((sum, course) => sum + course.credits, 0)
   const freeElectiveProgress = (totalFreeElectiveCredits / maxFreeElectiveCredits) * 100
 
-  const totalCompletedCredits = completedMandatoryCredits + totalElectiveCredits + totalFreeElectiveCredits
+  // Cap the credits used in the total calculation to their maximum values
+  const cappedElectiveCredits = Math.min(totalElectiveCredits, 60)
+  const cappedFreeElectiveCredits = Math.min(totalFreeElectiveCredits, maxFreeElectiveCredits)
+
+  const totalCompletedCredits = completedMandatoryCredits + cappedElectiveCredits + cappedFreeElectiveCredits
   const totalRequiredCredits = totalMandatoryCredits + 60 + maxFreeElectiveCredits
   const overallProgress = (totalCompletedCredits / totalRequiredCredits) * 100
 
@@ -480,6 +484,11 @@ export default function CourseTracker() {
           <Progress value={electiveProgress} className="h-2" />
           <p className="text-sm text-center text-gray-600">
             {totalElectiveCredits} of 60 ECTS completed ({Math.round(electiveProgress)}%)
+            {totalElectiveCredits > 60 && (
+              <span className="text-amber-600 font-semibold ml-1">
+                (Only 60 ECTS counted toward total)
+              </span>
+            )}
           </p>
         </div>
 
@@ -598,6 +607,11 @@ export default function CourseTracker() {
           <Progress value={freeElectiveProgress} className="h-2" />
           <p className="text-sm text-center text-gray-600">
             {totalFreeElectiveCredits} of {maxFreeElectiveCredits} ECTS completed ({Math.round(freeElectiveProgress)}%)
+            {totalFreeElectiveCredits > maxFreeElectiveCredits && (
+              <span className="text-amber-600 font-semibold ml-1">
+                (Only {maxFreeElectiveCredits} ECTS counted toward total)
+              </span>
+            )}
           </p>
         </div>
 
