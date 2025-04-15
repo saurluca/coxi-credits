@@ -495,7 +495,7 @@ export default function CourseTracker() {
         <div className="mt-4 space-y-4">
           {(Object.keys(areaNames) as Array<keyof typeof areaNames>).map((area) => {
             // Calculate max credits and progress based on area
-            const maxCredits = area === "cs" || area === "math" ? 9 : 48;
+            const maxCredits = area === "foundation" ? 4 : area === "cs" || area === "math" ? 9 : 48;
             const areaProgress = calculateAreaProgress(area);
             const progressPercentage = (areaProgress / maxCredits) * 100;
 
@@ -542,7 +542,7 @@ export default function CourseTracker() {
         </div>
 
         <div className="mt-6 space-y-2">
-          <h3 className="font-medium">Add New Elective Course</h3>
+          <h3 className="font-medium">Add New Mandatory Elective Course</h3>
           <div className="flex flex-col gap-2">
             <Input
               placeholder="Course Name"
