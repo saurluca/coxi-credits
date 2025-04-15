@@ -98,7 +98,7 @@ const areaNames = {
   psychology: "Psychology, Communication, Neuroscience, and Behavior",
   cs: "Computer Science",
   math: "Mathematics",
-  foundation: "Foundation"
+  foundation: "Methods of Cognitive Science"
 }
 
 const getCategoryColor = (category: Course["category"]) => {
