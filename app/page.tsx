@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Trash2 } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 
 interface Course {
   id: string
@@ -121,7 +121,7 @@ const getCategoryColor = (category: Course["category"]) => {
   }
 }
 
-const validGrades = ["1.0", "1.3", "1.7", "2.0", "2.3", "2.7", "3.0", "3.3", "3.7", "4.0", "5.0"]
+const validGrades = ["-", "1.0", "1.3", "1.7", "2.0", "2.3", "2.7", "3.0", "3.3", "3.7", "4.0"]
 
 export default function CourseTracker() {
   const [completedCourses, setCompletedCourses] = useState<string[]>([])
@@ -134,7 +134,7 @@ export default function CourseTracker() {
     area: keyof typeof areaNames;
   }>({ name: "", credits: "", area: "ai" })
   const [newFreeElective, setNewFreeElective] = useState({ name: "", credits: "" })
-  const [grades, setGrades] = useState<Record<string, number>>({})
+  const [grades, setGrades] = useState<Record<string, number | string>>({})
 
   const toggleCourse = (courseId: string) => {
     setCompletedCourses((prev) => {
@@ -161,6 +161,11 @@ export default function CourseTracker() {
     if (savedFreeElectiveCourses) setFreeElectiveCourses(JSON.parse(savedFreeElectiveCourses))
     if (savedGrades) setGrades(JSON.parse(savedGrades))
     if (savedMathCredits) setMathCredits(JSON.parse(savedMathCredits))
+
+    // Add debugging for the Select components once mounted
+    setTimeout(() => {
+      console.log("Debug - All grades:", grades);
+    }, 1000);
   }, [])
 
   const totalMandatoryCredits = courses.reduce((sum, course) => {
@@ -269,12 +274,14 @@ export default function CourseTracker() {
     setNewFreeElective({ name: "", credits: "" })
   }
 
-  const setGrade = (courseId: string, grade: number | "") => {
+  const setGrade = (courseId: string, grade: number | string | "") => {
+    console.log(`Grade for ${courseId} changed to:`, grade);
+
     setGrades(prev => {
       const newGrades = { ...prev }
-      if (grade === "" || isNaN(grade)) {
+      if (grade === "" || grade === "-" || (typeof grade === 'number' && isNaN(grade))) {
         delete newGrades[courseId]
-      } else if (grade >= 1.0 && grade <= 4.0) {
+      } else if (typeof grade === 'number' && grade >= 1.0 && grade <= 5.0) {
         newGrades[courseId] = grade
       }
       localStorage.setItem("grades", JSON.stringify(newGrades))
@@ -298,9 +305,12 @@ export default function CourseTracker() {
 
     // Step 1: Include all elective courses in the grade calculation
     electiveCourses.forEach(course => {
-      if (grades[course.id]) {
-        weightedSum += course.credits * grades[course.id];
-        totalCredits += course.credits;
+      if (grades[course.id] && grades[course.id] !== "-") {
+        const grade = grades[course.id];
+        if (typeof grade === 'number') {
+          weightedSum += course.credits * grade;
+          totalCredits += course.credits;
+        }
       }
     });
 
@@ -322,25 +332,34 @@ export default function CourseTracker() {
 
     // Always include Statistics
     const statsCourse = courses.find(c => c.id === "stats");
-    if (statsCourse && grades[statsCourse.id]) {
-      weightedSum += statsCourse.credits * grades[statsCourse.id];
-      totalCredits += statsCourse.credits;
+    if (statsCourse && grades[statsCourse.id] && grades[statsCourse.id] !== "-") {
+      const grade = grades[statsCourse.id];
+      if (typeof grade === 'number') {
+        weightedSum += statsCourse.credits * grade;
+        totalCredits += statsCourse.credits;
+      }
     }
 
     // Include Math only if a second math course is taken in electives and it's the 9-credit version
     const mathElectives = electiveCourses.filter(course => course.area === "math");
     const mathCourse = courses.find(c => c.id === "math");
-    if (mathElectives.length > 0 && mathCourse && grades[mathCourse.id] && mathCredits === 9) {
-      weightedSum += mathCredits * grades[mathCourse.id];
-      totalCredits += mathCredits;
+    if (mathElectives.length > 0 && mathCourse && grades[mathCourse.id] && grades[mathCourse.id] !== "-" && mathCredits === 9) {
+      const grade = grades[mathCourse.id];
+      if (typeof grade === 'number') {
+        weightedSum += mathCredits * grade;
+        totalCredits += mathCredits;
+      }
     }
 
     // Include CS only if a second CS course is taken in electives
     const csElectives = electiveCourses.filter(course => course.area === "cs");
     const csCourse = courses.find(c => c.id === "cs");
-    if (csElectives.length > 0 && csCourse && grades[csCourse.id]) {
-      weightedSum += csCourse.credits * grades[csCourse.id];
-      totalCredits += csCourse.credits;
+    if (csElectives.length > 0 && csCourse && grades[csCourse.id] && grades[csCourse.id] !== "-") {
+      const grade = grades[csCourse.id];
+      if (typeof grade === 'number') {
+        weightedSum += csCourse.credits * grade;
+        totalCredits += csCourse.credits;
+      }
     }
 
     // For AI, Psychology, Philosophy: only include mandatory courses from top 2 areas
@@ -349,13 +368,16 @@ export default function CourseTracker() {
         // Match course category with top areas
         topAreas.some(area => categoryMapping[area as keyof typeof categoryMapping]?.includes(course.category)) &&
         // Has a grade
-        grades[course.id] &&
+        grades[course.id] && grades[course.id] !== "-" &&
         // Not Foundation of Cognitive Science (which never has a grade)
         course.id !== "cog"
       )
       .forEach(course => {
-        weightedSum += course.credits * grades[course.id];
-        totalCredits += course.credits;
+        const grade = grades[course.id];
+        if (typeof grade === 'number') {
+          weightedSum += course.credits * grade;
+          totalCredits += course.credits;
+        }
       });
 
     return totalCredits > 0
@@ -465,13 +487,15 @@ export default function CourseTracker() {
                 {completedCourses.includes(course.id) && (
                   (course.id !== "cog" && !(course.id === "math" && mathCredits === 6)) && (
                     <Select
-                      value={grades[course.id]?.toString() || ""}
-                      onValueChange={(value: string) => setGrade(course.id, value ? parseFloat(value) : "")}
+                      value={grades[course.id]?.toString() || "-"}
+                      onValueChange={(value: string) => setGrade(course.id, value === "-" ? value : parseFloat(value))}
                     >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select grade" />
+                      <SelectTrigger className="w-full mt-2">
+                        <div className="flex-1 text-left">
+                          {grades[course.id]?.toString() || "-"}
+                        </div>
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent position="popper">
                         {validGrades.map((grade) => (
                           <SelectItem key={grade} value={grade}>
                             {grade}
@@ -524,13 +548,15 @@ export default function CourseTracker() {
                         <div className="flex items-center gap-2">
                           <span>{course.credits} ECTS</span>
                           <Select
-                            value={grades[course.id]?.toString() || ""}
-                            onValueChange={(value: string) => setGrade(course.id, value ? parseFloat(value) : "")}
+                            value={grades[course.id]?.toString() || "-"}
+                            onValueChange={(value: string) => setGrade(course.id, value === "-" ? value : parseFloat(value))}
                           >
-                            <SelectTrigger className="w-20">
-                              <SelectValue placeholder="Select grade" />
+                            <SelectTrigger className="w-24">
+                              <div className="flex-1 text-left">
+                                {grades[course.id]?.toString() || "-"}
+                              </div>
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent position="popper">
                               {validGrades.map((grade) => (
                                 <SelectItem key={grade} value={grade}>
                                   {grade}
