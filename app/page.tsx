@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Trash2 } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Course {
   id: string
@@ -119,6 +120,8 @@ const getCategoryColor = (category: Course["category"]) => {
       return ""
   }
 }
+
+const validGrades = ["1.0", "1.3", "1.7", "2.0", "2.3", "2.7", "3.0", "3.3", "3.7", "4.0", "5.0"]
 
 export default function CourseTracker() {
   const [completedCourses, setCompletedCourses] = useState<string[]>([])
@@ -461,16 +464,21 @@ export default function CourseTracker() {
                 )}
                 {completedCourses.includes(course.id) && (
                   (course.id !== "cog" && !(course.id === "math" && mathCredits === 6)) && (
-                    <Input
-                      type="number"
-                      min="1.0"
-                      max="4.0"
-                      step="0.1"
-                      placeholder="Grade (1.0-4.0)"
-                      value={grades[course.id] || ""}
-                      onChange={(e) => setGrade(course.id, e.target.value ? parseFloat(e.target.value) : "")}
-                      className="mt-2 w-full"
-                    />
+                    <Select
+                      value={grades[course.id]?.toString() || ""}
+                      onValueChange={(value: string) => setGrade(course.id, value ? parseFloat(value) : "")}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select grade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {validGrades.map((grade) => (
+                          <SelectItem key={grade} value={grade}>
+                            {grade}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )
                 )}
               </div>
@@ -515,16 +523,21 @@ export default function CourseTracker() {
                         <span>{course.name}</span>
                         <div className="flex items-center gap-2">
                           <span>{course.credits} ECTS</span>
-                          <Input
-                            type="number"
-                            min="1.0"
-                            max="4.0"
-                            step="0.1"
-                            placeholder="Grade"
-                            value={grades[course.id] || ""}
-                            onChange={(e) => setGrade(course.id, e.target.value ? parseFloat(e.target.value) : "")}
-                            className="w-20 font-bold"
-                          />
+                          <Select
+                            value={grades[course.id]?.toString() || ""}
+                            onValueChange={(value: string) => setGrade(course.id, value ? parseFloat(value) : "")}
+                          >
+                            <SelectTrigger className="w-20">
+                              <SelectValue placeholder="Select grade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {validGrades.map((grade) => (
+                                <SelectItem key={grade} value={grade}>
+                                  {grade}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <Button
                             variant="destructive"
                             size="sm"
