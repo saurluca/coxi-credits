@@ -739,7 +739,7 @@ export default function CourseTracker() {
                   size="sm"
                   onClick={() => removeFreeElectiveCourse(course.id)}
                 >
-                  Remove
+                  <Trash2 />
                 </Button>
               </div>
             </div>
