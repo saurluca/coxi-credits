@@ -128,6 +128,7 @@ export default function CourseTracker() {
   const [electiveCourses, setElectiveCourses] = useState<ElectiveCourse[]>([])
   const [freeElectiveCourses, setFreeElectiveCourses] = useState<FreeElectiveCourse[]>([])
   const [mathCredits, setMathCredits] = useState<number>(9)
+  const [topGradedAreas, setTopGradedAreas] = useState<string[]>([])
   const [newCourse, setNewCourse] = useState<{
     name: string;
     credits: string;
@@ -358,6 +359,9 @@ export default function CourseTracker() {
       .slice(0, 2)
       .map(([area]) => area);
 
+    // Remove the state update from here
+    // setTopGradedAreas(topAreas);
+
     // Step 3: Handle mandatory courses according to rules
 
     // Always include Statistics
@@ -490,6 +494,25 @@ export default function CourseTracker() {
   // Calculate the weighted grade once before rendering
   const currentWeightedGrade = calculateWeightedGrade();
 
+  // Add a useEffect to update topGradedAreas when relevant data changes
+  useEffect(() => {
+    // Calculate which areas have the most credits in electives
+    const areaCredits = {
+      ai: calculateAreaProgress("ai"),
+      philosophy: calculateAreaProgress("philosophy"),
+      psychology: calculateAreaProgress("psychology")
+    };
+
+    // Sort areas by credit count to find top 2
+    const topAreas = Object.entries(areaCredits)
+      .sort(([, creditsA], [, creditsB]) => creditsB - creditsA)
+      .slice(0, 2)
+      .map(([area]) => area);
+
+    // Update the state
+    setTopGradedAreas(topAreas);
+  }, [electiveCourses]); // Only re-run when electiveCourses changes
+
   const result = (
     <div className="max-w-4xl mx-auto p-4 space-y-8">
       <div className="bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-lg border border-purple-200">
@@ -516,62 +539,105 @@ export default function CourseTracker() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {courses.map((course) => (
-          <Card
-            key={course.id}
-            className={`p-4 border-2 ${getCategoryColor(course.category)}`}
-          >
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id={course.id}
-                checked={completedCourses.includes(course.id)}
-                onCheckedChange={() => toggleCourse(course.id)}
-              />
-              <div className="space-y-1 flex-1">
-                <label htmlFor={course.id} className="text-sm font-medium leading-none">
-                  {course.name}
-                </label>
-                <p className="text-sm text-gray-500">
-                  {course.id === "math" ? mathCredits : course.credits} ECTS
-                  {course.options && ` (${course.options} out of ${course.totalInGroup} courses)`}
-                </p>
-                {course.id === "math" && (
-                  <div className="flex items-center space-x-2 mt-2">
-                    <div
-                      onClick={toggleMathCredits}
-                      className={`w-10 h-5 flex items-center rounded-full p-1 cursor-pointer ${mathCredits === 9 ? "bg-blue-500 justify-end" : "bg-gray-300 justify-start"
-                        }`}
-                    >
-                      <div className="bg-white w-4 h-4 rounded-full shadow-md"></div>
-                    </div>
-                    <span className="text-xs text-gray-600">{mathCredits === 9 ? "9 ECTS" : "6 ECTS"}</span>
+        {courses.map((course) => {
+          // Determine if this course is used in grading
+          let isUsedInGrading = false;
+
+          // Statistics is always used in grading
+          if (course.id === "stats") {
+            isUsedInGrading = true;
+          }
+
+          // Math is used in grading if a second math course is taken in electives and it's the 9-credit version
+          if (course.id === "math") {
+            const mathElectives = electiveCourses.filter(course => course.area === "math");
+            isUsedInGrading = mathElectives.length > 0 && mathCredits === 9;
+          }
+
+          // CS is used in grading if a second CS course is taken in electives
+          if (course.id === "cs") {
+            const csElectives = electiveCourses.filter(course => course.area === "cs");
+            isUsedInGrading = csElectives.length > 0;
+          }
+
+          // For AI, Psychology, Philosophy: only used if in top 2 areas
+          if (["ai", "philosophy", "psychology"].includes(course.category)) {
+            isUsedInGrading = topGradedAreas.includes(course.category);
+          }
+
+          // Foundation of Cognitive Science is never used in grading
+          if (course.id === "cog") {
+            isUsedInGrading = false;
+          }
+
+          return (
+            <Card
+              key={course.id}
+              className={`p-4 border-2 ${getCategoryColor(course.category)}`}
+            >
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id={course.id}
+                  checked={completedCourses.includes(course.id)}
+                  onCheckedChange={() => toggleCourse(course.id)}
+                />
+                <div className="space-y-1 flex-1">
+                  <div className="flex justify-between items-start">
+                    <label htmlFor={course.id} className="text-sm font-medium leading-none">
+                      {course.name}
+                    </label>
+                    {isUsedInGrading ? (
+                      <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 mx-1">
+                        Included
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 mx-1">
+                        Excluded
+                      </span>
+                    )}
                   </div>
-                )}
-                {completedCourses.includes(course.id) && (
-                  (course.id !== "cog" && !(course.id === "math" && mathCredits === 6)) && (
-                    <Select
-                      value={grades[course.id]?.toString() || "-"}
-                      onValueChange={(value: string) => setGrade(course.id, value === "-" ? value : parseFloat(value))}
-                    >
-                      <SelectTrigger className="w-full mt-2">
-                        <div className="flex-1 text-left">
-                          {grades[course.id]?.toString() || "-"}
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent position="popper">
-                        {validGrades.map((grade) => (
-                          <SelectItem key={grade} value={grade}>
-                            {grade}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )
-                )}
+                  <p className="text-sm text-gray-500">
+                    {course.id === "math" ? mathCredits : course.credits} ECTS
+                    {course.options && ` (${course.options} out of ${course.totalInGroup} courses)`}
+                  </p>
+                  {course.id === "math" && (
+                    <div className="flex items-center space-x-2 mt-2">
+                      <div
+                        onClick={toggleMathCredits}
+                        className={`w-10 h-5 flex items-center rounded-full p-1 cursor-pointer ${mathCredits === 9 ? "bg-blue-500 justify-end" : "bg-gray-300 justify-start"
+                          }`}
+                      >
+                        <div className="bg-white w-4 h-4 rounded-full shadow-md"></div>
+                      </div>
+                      <span className="text-xs text-gray-600">{mathCredits === 9 ? "9 ECTS" : "6 ECTS"}</span>
+                    </div>
+                  )}
+                  {completedCourses.includes(course.id) && (
+                    (course.id !== "cog" && !(course.id === "math" && mathCredits === 6)) && (
+                      <Select
+                        value={grades[course.id]?.toString() || "-"}
+                        onValueChange={(value: string) => setGrade(course.id, value === "-" ? value : parseFloat(value))}
+                      >
+                        <SelectTrigger className="w-full mt-2">
+                          <div className="flex-1 text-left">
+                            {grades[course.id]?.toString() || "-"}
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent position="popper">
+                          {validGrades.map((grade) => (
+                            <SelectItem key={grade} value={grade}>
+                              {grade}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )
+                  )}
+                </div>
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
       <div className="bg-gray-100 p-6 rounded-lg border">
         <h2 className="text-xl font-semibold text-center mb-4">Mandatory Electives (60 ECTS required)</h2>
@@ -593,10 +659,18 @@ export default function CourseTracker() {
             const maxCredits = area === "foundation" ? 4 : area === "cs" || area === "math" ? 9 : 48;
             const areaProgress = calculateAreaProgress(area);
             const progressPercentage = (areaProgress / maxCredits) * 100;
+            const isGradedArea = topGradedAreas.includes(area);
 
             return (
               <div key={area} className="space-y-2">
-                <h3 className="font-medium">{areaNames[area]}</h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="font-medium">{areaNames[area]}</h3>
+                  {(area === "ai" || area === "philosophy" || area === "psychology") && (
+                    <span className={`text-xs px-2 py-1 rounded-full ${isGradedArea ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}>
+                      {isGradedArea ? "Included" : "Not included"}
+                    </span>
+                  )}
+                </div>
                 <Progress value={progressPercentage} className="h-2" />
                 <p className="text-sm text-gray-600">
                   {areaProgress} of {maxCredits} ECTS completed
