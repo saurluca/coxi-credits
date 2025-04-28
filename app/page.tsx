@@ -132,6 +132,7 @@ export default function CourseTracker() {
     name: string;
     credits: string;
     area: keyof typeof areaNames;
+    grade?: string;
   }>({ name: "", credits: "", area: "ai" })
   const [newFreeElective, setNewFreeElective] = useState({ name: "", credits: "" })
   const [grades, setGrades] = useState<Record<string, number | string>>({})
@@ -233,11 +234,13 @@ export default function CourseTracker() {
       return
     }
 
+    const courseId = crypto.randomUUID();
+
     setElectiveCourses((prev) => {
       const newElectiveCourses = [
         ...prev,
         {
-          id: crypto.randomUUID(),
+          id: courseId,
           name: newCourse.name,
           credits: newCredits,
           area: newCourse.area as keyof typeof areaNames,
@@ -246,6 +249,17 @@ export default function CourseTracker() {
       localStorage.setItem("electiveCourses", JSON.stringify(newElectiveCourses))
       return newElectiveCourses
     })
+
+    // Set the grade if provided
+    if (newCourse.grade && newCourse.grade !== "-") {
+      setGrades(prev => {
+        const newGrades = { ...prev };
+        newGrades[courseId] = parseFloat(newCourse.grade!);
+        localStorage.setItem("grades", JSON.stringify(newGrades));
+        return newGrades;
+      });
+    }
+
     setNewCourse({ name: "", credits: "", area: "ai" })
   }
 
@@ -300,6 +314,7 @@ export default function CourseTracker() {
   }
 
   const calculateWeightedGrade = () => {
+    console.time("calculateWeightedGrade");
     let weightedSum = 0;
     let totalCredits = 0;
 
@@ -380,9 +395,11 @@ export default function CourseTracker() {
         }
       });
 
-    return totalCredits > 0
+    const result = totalCredits > 0
       ? Number((weightedSum / totalCredits).toFixed(2))
       : null;
+    console.timeEnd("calculateWeightedGrade");
+    return result;
   }
 
   const removeElectiveCourse = (courseId: string) => {
@@ -427,7 +444,38 @@ export default function CourseTracker() {
     })
   }
 
-  return (
+  // Add logging to track input changes
+  const handleCourseNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.time("courseNameUpdate");
+    const newValue = e.target.value;
+    console.log("Course name changing to:", newValue);
+    setNewCourse({ ...newCourse, name: newValue });
+    console.timeEnd("courseNameUpdate");
+  }
+
+  const handleCreditsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.time("creditsUpdate");
+    const newValue = e.target.value;
+    console.log("Credits changing to:", newValue);
+    setNewCourse({ ...newCourse, credits: newValue });
+    console.timeEnd("creditsUpdate");
+  }
+
+  const handleGradeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    console.time("gradeUpdate");
+    const newValue = e.target.value;
+    console.log("Grade changing to:", newValue);
+    setNewCourse({ ...newCourse, grade: newValue });
+    console.timeEnd("gradeUpdate");
+  }
+
+  // Wrap render in logging
+  console.time("renderTime");
+
+  // Calculate the weighted grade once before rendering
+  const currentWeightedGrade = calculateWeightedGrade();
+
+  const result = (
     <div className="max-w-4xl mx-auto p-4 space-y-8">
       <div className="bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-lg border border-purple-200">
         <h1 className="text-2xl font-bold text-center mb-4">Overall Progress</h1>
@@ -435,9 +483,9 @@ export default function CourseTracker() {
         <p className="text-lg text-center mt-2">
           {totalCompletedCredits} of {totalRequiredCredits} ECTS completed ({Math.round(overallProgress)}%)
         </p>
-        {calculateWeightedGrade() && (
+        {currentWeightedGrade && (
           <p className="text-lg text-center mt-2 font-semibold">
-            Weighted Grade Average: {calculateWeightedGrade()}
+            Weighted Grade Average: {currentWeightedGrade}
           </p>
         )}
       </div>
@@ -586,14 +634,25 @@ export default function CourseTracker() {
             <Input
               placeholder="Course Name"
               value={newCourse.name}
-              onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })}
+              onChange={handleCourseNameChange}
             />
             <Input
               type="number"
               placeholder="Credits"
               value={newCourse.credits}
-              onChange={(e) => setNewCourse({ ...newCourse, credits: e.target.value })}
+              onChange={handleCreditsChange}
             />
+            <select
+              className="w-full p-2 border rounded-md bg-white"
+              value={newCourse.grade || "-"}
+              onChange={handleGradeChange}
+            >
+              {validGrades.map((grade) => (
+                <option key={grade} value={grade}>
+                  {grade}
+                </option>
+              ))}
+            </select>
             <RadioGroup
               value={newCourse.area}
               onValueChange={(value) => setNewCourse({ ...newCourse, area: value as keyof typeof areaNames })}
@@ -691,6 +750,8 @@ export default function CourseTracker() {
         </div>
       </div>
     </div>
-  )
+  );
+  console.timeEnd("renderTime");
+  return result;
 }
 
