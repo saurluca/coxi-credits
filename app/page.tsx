@@ -213,6 +213,13 @@ export default function CourseTracker() {
     }
 
     const newCredits = Number.parseInt(newCourse.credits)
+
+    // Validate credits are between 1 and 30
+    if (newCredits < 1 || newCredits > 30) {
+      alert("Credits must be between 1 and 30")
+      return
+    }
+
     const areaCredits = calculateAreaProgress(newCourse.area as keyof typeof areaNames)
 
     // Check credit limits based on area
@@ -273,13 +280,21 @@ export default function CourseTracker() {
       return
     }
 
+    const newCredits = Number.parseInt(newFreeElective.credits)
+
+    // Validate credits are between 1 and 30
+    if (newCredits < 1 || newCredits > 30) {
+      alert("Credits must be between 1 and 30")
+      return
+    }
+
     setFreeElectiveCourses((prev) => {
       const newFreeElectiveCourses = [
         ...prev,
         {
           id: crypto.randomUUID(),
           name: newFreeElective.name,
-          credits: Number.parseInt(newFreeElective.credits),
+          credits: newCredits,
         },
       ]
       localStorage.setItem("freeElectiveCourses", JSON.stringify(newFreeElectiveCourses))
