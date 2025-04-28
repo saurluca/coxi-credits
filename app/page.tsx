@@ -513,6 +513,33 @@ export default function CourseTracker() {
     setTopGradedAreas(topAreas);
   }, [electiveCourses]); // Only re-run when electiveCourses changes
 
+  // Function to determine if an area is included in grading
+  const isAreaIncludedInGrading = (area: keyof typeof areaNames) => {
+    // For AI, Philosophy, Psychology: only included if in top 2 areas
+    if (area === "ai" || area === "philosophy" || area === "psychology") {
+      return topGradedAreas.includes(area);
+    }
+
+    // For CS: included if there are CS electives
+    if (area === "cs") {
+      const csElectives = electiveCourses.filter(course => course.area === "cs");
+      return csElectives.length > 0;
+    }
+
+    // For Math: included if there are math electives and mathCredits is 9
+    if (area === "math") {
+      const mathElectives = electiveCourses.filter(course => course.area === "math");
+      return mathElectives.length > 0 && mathCredits === 9;
+    }
+
+    // For Foundation: never included
+    if (area === "foundation") {
+      return false;
+    }
+
+    return false;
+  };
+
   const result = (
     <div className="max-w-4xl mx-auto p-4 space-y-8">
       <div className="bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-lg border border-purple-200">
@@ -581,7 +608,7 @@ export default function CourseTracker() {
                   checked={completedCourses.includes(course.id)}
                   onCheckedChange={() => toggleCourse(course.id)}
                 />
-                <div className="space-y-1 flex-1">
+                <div className="space-y-2 flex-1">
                   <div className="flex justify-between items-start">
                     <label htmlFor={course.id} className="text-sm font-medium leading-none">
                       {course.name}
@@ -659,17 +686,15 @@ export default function CourseTracker() {
             const maxCredits = area === "foundation" ? 4 : area === "cs" || area === "math" ? 9 : 48;
             const areaProgress = calculateAreaProgress(area);
             const progressPercentage = (areaProgress / maxCredits) * 100;
-            const isGradedArea = topGradedAreas.includes(area);
+            const isGradedArea = isAreaIncludedInGrading(area);
 
             return (
               <div key={area} className="space-y-2">
                 <div className="flex justify-between items-center">
                   <h3 className="font-medium">{areaNames[area]}</h3>
-                  {(area === "ai" || area === "philosophy" || area === "psychology") && (
-                    <span className={`text-xs px-2 py-1 rounded-full mx-1 ${isGradedArea ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-600"}`}>
-                      {isGradedArea ? "Included" : "Excluded"}
-                    </span>
-                  )}
+                  <span className={`text-xs px-2 py-1 rounded-full mx-1 ${isGradedArea ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-600"}`}>
+                    {isGradedArea ? "Included" : "Excluded"}
+                  </span>
                 </div>
                 <Progress value={progressPercentage} className="h-2" />
                 <p className="text-sm text-gray-600">
