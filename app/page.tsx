@@ -673,35 +673,35 @@ export default function CourseTracker() {
               onValueChange={(value) => setNewCourse({ ...newCourse, area: value as keyof typeof areaNames })}
               className="gap-2"
             >
-              <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
+              <div className={`flex items-center space-x-2 rounded-md border-2 p-2 cursor-pointer hover:bg-gray-100 ${getCategoryColor("ai")}`}
                 onClick={() => setNewCourse({ ...newCourse, area: "ai" })}>
                 <RadioGroupItem value="ai" id="ai" />
                 <Label className="flex-grow cursor-pointer">
                   Artificial Intelligence and Machine Learning
                 </Label>
               </div>
-              <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
+              <div className={`flex items-center space-x-2 rounded-md border-2 p-2 cursor-pointer hover:bg-gray-100 ${getCategoryColor("philosophy")}`}
                 onClick={() => setNewCourse({ ...newCourse, area: "philosophy" })}>
                 <RadioGroupItem value="philosophy" id="philosophy" />
                 <Label className="flex-grow cursor-pointer">
                   Mind, Ethics, and Society
                 </Label>
               </div>
-              <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
+              <div className={`flex items-center space-x-2 rounded-md border-2 p-2 cursor-pointer hover:bg-gray-100 ${getCategoryColor("psychology")}`}
                 onClick={() => setNewCourse({ ...newCourse, area: "psychology" })}>
                 <RadioGroupItem value="psychology" id="psychology" />
                 <Label className="flex-grow cursor-pointer">
                   Psychology, Communication, Neuroscience, and Behavior
                 </Label>
               </div>
-              <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
+              <div className={`flex items-center space-x-2 rounded-md border-2 p-2 cursor-pointer hover:bg-gray-100 ${getCategoryColor("cs")}`}
                 onClick={() => setNewCourse({ ...newCourse, area: "cs" })}>
                 <RadioGroupItem value="cs" id="cs" />
                 <Label className="flex-grow cursor-pointer">
                   Computer Science
                 </Label>
               </div>
-              <div className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-gray-100"
+              <div className={`flex items-center space-x-2 rounded-md border-2 p-2 cursor-pointer hover:bg-gray-100 ${getCategoryColor("math")}`}
                 onClick={() => setNewCourse({ ...newCourse, area: "math" })}>
                 <RadioGroupItem value="math" id="math" />
                 <Label className="flex-grow cursor-pointer">
