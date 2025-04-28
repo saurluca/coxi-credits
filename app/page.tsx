@@ -606,7 +606,7 @@ export default function CourseTracker() {
                   {electiveCourses
                     .filter((course) => course.area === area)
                     .map((course) => (
-                      <div key={course.id} className="flex justify-between items-center bg-white p-2 rounded">
+                      <div key={course.id} className={`flex justify-between items-center bg-white p-2 rounded border-2 ${getCategoryColor(course.area)}`}>
                         <span>{course.name}</span>
                         <div className="flex items-center gap-2">
                           <span>{course.credits} ECTS</span>
