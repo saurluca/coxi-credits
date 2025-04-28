@@ -863,6 +863,9 @@ export default function CourseTracker() {
           </div>
         </div>
       </div>
+      <footer className="mt-12 py-4 border-t text-center text-sm text-gray-500">
+        <p>Created by Luca Saur • Email: mail@lucasaur • <a href="https://github.com/saurluca/coxi-credits" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">GitHub</a></p>
+      </footer>
     </div>
   );
   console.timeEnd("renderTime");
