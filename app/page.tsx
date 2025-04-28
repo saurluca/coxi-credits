@@ -573,7 +573,7 @@ export default function CourseTracker() {
           </Card>
         ))}
       </div>
-      <div className="bg-blue-100 p-6 rounded-lg border border-blue-200">
+      <div className="bg-gray-100 p-6 rounded-lg border">
         <h2 className="text-xl font-semibold text-center mb-4">Mandatory Electives (60 ECTS required)</h2>
         <div className="space-y-2">
           <Progress value={electiveProgress} className="h-2" />
