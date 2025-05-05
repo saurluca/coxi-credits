@@ -577,14 +577,13 @@ export default function CourseTracker() {
             const maxCredits = area === "foundation" ? 4 : area === "cs" || area === "math" ? 9 : 48;
             const areaProgress = calculateAreaProgress(area);
             const progressPercentage = (areaProgress / maxCredits) * 100;
-            const isGradedArea = isAreaIncludedInGrading(area);
 
             return (
               <div key={area} className="space-y-2">
                 <div className="flex justify-between items-center">
                   <h3 className="font-medium">{areaNames[area]}</h3>
-                  <span className={`text-xs px-2 py-1 rounded-full mx-1 ${isGradedArea ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-600"}`}>
-                    {isGradedArea ? "Included" : "Excluded"}
+                  <span className="text-xs px-2 py-1 rounded-full mx-1 bg-green-100 text-green-800">
+                    Included
                   </span>
                 </div>
                 <Progress value={progressPercentage} className="h-2" />
