@@ -14,6 +14,7 @@ interface ElectiveAreaCardProps {
     grades: Record<string, number | string>
     onSetGrade: (courseId: string, grade: number | string | "") => void
     onRemoveCourse: (courseId: string) => void
+    isExporting?: boolean
 }
 
 export function ElectiveAreaCard({
@@ -23,7 +24,8 @@ export function ElectiveAreaCard({
     electiveCourses,
     grades,
     onSetGrade,
-    onRemoveCourse
+    onRemoveCourse,
+    isExporting = false
 }: ElectiveAreaCardProps) {
     const progressPercentage = (areaProgress / maxCredits) * 100
 
@@ -65,13 +67,15 @@ export function ElectiveAreaCard({
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => onRemoveCourse(course.id)}
-                                >
-                                    <Trash2 />
-                                </Button>
+                                {!isExporting && (
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => onRemoveCourse(course.id)}
+                                    >
+                                        <Trash2 />
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     ))}

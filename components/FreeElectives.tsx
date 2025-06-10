@@ -16,6 +16,7 @@ interface FreeElectivesProps {
     onNewFreeElectiveChange: (field: 'name' | 'credits', value: string) => void
     onAddFreeElective: () => void
     onRemoveFreeElective: (courseId: string) => void
+    isExporting?: boolean
 }
 
 export function FreeElectives({
@@ -26,7 +27,8 @@ export function FreeElectives({
     newFreeElective,
     onNewFreeElectiveChange,
     onAddFreeElective,
-    onRemoveFreeElective
+    onRemoveFreeElective,
+    isExporting = false
 }: FreeElectivesProps) {
     return (
         <div className="bg-green-100 p-6 rounded-lg border border-green-200">
@@ -49,35 +51,39 @@ export function FreeElectives({
                         <span>{course.name}</span>
                         <div className="flex items-center gap-2">
                             <span>{course.credits} ECTS</span>
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => onRemoveFreeElective(course.id)}
-                            >
-                                <Trash2 />
-                            </Button>
+                            {!isExporting && (
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => onRemoveFreeElective(course.id)}
+                                >
+                                    <Trash2 />
+                                </Button>
+                            )}
                         </div>
                     </div>
                 ))}
             </div>
 
-            <div className="mt-6 space-y-2">
-                <h3 className="font-medium">Add New Free Elective Course</h3>
-                <div className="flex flex-col gap-2">
-                    <Input
-                        placeholder="Course Name"
-                        value={newFreeElective.name}
-                        onChange={(e) => onNewFreeElectiveChange('name', e.target.value)}
-                    />
-                    <Input
-                        type="number"
-                        placeholder="Credits"
-                        value={newFreeElective.credits}
-                        onChange={(e) => onNewFreeElectiveChange('credits', e.target.value)}
-                    />
-                    <Button onClick={onAddFreeElective}>Add Free Elective Course</Button>
+            {!isExporting && (
+                <div className="mt-6 space-y-2">
+                    <h3 className="font-medium">Add New Free Elective Course</h3>
+                    <div className="flex flex-col gap-2">
+                        <Input
+                            placeholder="Course Name"
+                            value={newFreeElective.name}
+                            onChange={(e) => onNewFreeElectiveChange('name', e.target.value)}
+                        />
+                        <Input
+                            type="number"
+                            placeholder="Credits"
+                            value={newFreeElective.credits}
+                            onChange={(e) => onNewFreeElectiveChange('credits', e.target.value)}
+                        />
+                        <Button onClick={onAddFreeElective}>Add Free Elective Course</Button>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     )
 } 

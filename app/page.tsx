@@ -55,6 +55,9 @@ export default function CourseTracker() {
     setIsExporting(true);
 
     try {
+      // Wait for the re-render to complete after setting isExporting to true
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const now = new Date();
       const dateStr = now.toISOString().split('T')[0];
 
@@ -204,19 +207,22 @@ export default function CourseTracker() {
                 grades={grades}
                 onSetGrade={setGrade}
                 onRemoveCourse={removeElectiveCourse}
+                isExporting={isExporting}
               />
             );
           })}
         </div>
 
-        <AddElectiveForm
-          newCourse={newCourse}
-          onCourseNameChange={handleCourseNameChange}
-          onCreditsChange={handleCreditsChange}
-          onGradeChange={handleGradeChange}
-          onAreaChange={handleAreaChange}
-          onAddCourse={addElectiveCourse}
-        />
+        {!isExporting && (
+          <AddElectiveForm
+            newCourse={newCourse}
+            onCourseNameChange={handleCourseNameChange}
+            onCreditsChange={handleCreditsChange}
+            onGradeChange={handleGradeChange}
+            onAreaChange={handleAreaChange}
+            onAddCourse={addElectiveCourse}
+          />
+        )}
       </div>
 
       <FreeElectives
@@ -228,6 +234,7 @@ export default function CourseTracker() {
         onNewFreeElectiveChange={handleFreeElectiveChange}
         onAddFreeElective={addFreeElectiveCourse}
         onRemoveFreeElective={removeFreeElectiveCourse}
+        isExporting={isExporting}
       />
 
       <footer className="mt-12 py-4 border-t text-center text-sm text-gray-500">
