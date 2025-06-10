@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -404,33 +403,6 @@ export default function CourseTracker() {
     setTopGradedAreas(topAreas);
   }, [electiveCourses]); // Only re-run when electiveCourses changes
 
-  // Function to determine if an area is included in grading
-  const isAreaIncludedInGrading = (area: keyof typeof areaNames) => {
-    // For AI, Philosophy, Psychology: only included if in top 2 areas
-    if (area === "ai" || area === "philosophy" || area === "psychology") {
-      return topGradedAreas.includes(area);
-    }
-
-    // For CS: included if there are CS electives
-    if (area === "cs") {
-      const csElectives = electiveCourses.filter(course => course.area === "cs");
-      return csElectives.length > 0;
-    }
-
-    // For Math: included if there are math electives and mathCredits is 9
-    if (area === "math") {
-      const mathElectives = electiveCourses.filter(course => course.area === "math");
-      return mathElectives.length > 0 && mathCredits === 9;
-    }
-
-    // For Foundation: never included
-    if (area === "foundation") {
-      return false;
-    }
-
-    return false;
-  };
-
   const result = (
     <div className="max-w-4xl mx-auto p-4 space-y-8">
       <div className="bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-lg border border-purple-200">
@@ -758,7 +730,6 @@ export default function CourseTracker() {
       </footer>
     </div>
   );
-  console.timeEnd("renderTime");
   return result;
 }
 
