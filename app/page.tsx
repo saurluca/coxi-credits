@@ -61,31 +61,64 @@ export default function CourseTracker() {
       const now = new Date();
       const dateStr = now.toISOString().split('T')[0];
 
+      // Prepare PDF with A4 size
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      // Compute a dynamic render scale to balance clarity and size
+      const targetDpi = 320; // good balance for text clarity
+      const elementWidthPx = contentRef.current.clientWidth || 1024;
+      const desiredCanvasWidthPx = Math.round((pdfWidth / 25.4) * targetDpi);
+      const computedScale = Math.min(2, Math.max(1, desiredCanvasWidthPx / elementWidthPx));
+
+      // Render the full element at computed scale
       const canvas = await html2canvas(contentRef.current, {
-        scale: 2,
+        scale: computedScale,
         useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        height: contentRef.current.scrollHeight,
-        width: contentRef.current.scrollWidth
+        backgroundColor: '#ffffff'
       });
 
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
+      // Calculate how tall one PDF page is in canvas pixels
+      const pageWidthPx = canvas.width;
+      const pageHeightPx = Math.floor((canvas.width * pdfHeight) / pdfWidth);
 
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      let position = 0;
+      // Pre-calc the drawn image width in mm for each page
+      const imgWidth = pdfWidth;
 
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      let yPx = 0;
+      while (yPx < canvas.height) {
+        const sliceHeightPx = Math.min(pageHeightPx, canvas.height - yPx);
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = pageWidthPx;
+        pageCanvas.height = sliceHeightPx;
 
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        const ctx = pageCanvas.getContext('2d');
+        if (!ctx) break;
+
+        // Copy a vertical slice from the full canvas into the page canvas
+        ctx.drawImage(
+          canvas,
+          0,
+          yPx,
+          pageWidthPx,
+          sliceHeightPx,
+          0,
+          0,
+          pageWidthPx,
+          sliceHeightPx
+        );
+
+        // Use JPEG with moderate compression for better readability
+        const pageDataUrl = pageCanvas.toDataURL('image/jpeg', 0.82);
+        const pageImgHeightMm = (sliceHeightPx * imgWidth) / pageWidthPx;
+
+        pdf.addImage(pageDataUrl, 'JPEG', 0, 0, imgWidth, pageImgHeightMm);
+
+        yPx += sliceHeightPx;
+        if (yPx < canvas.height) {
+          pdf.addPage();
+        }
       }
 
       pdf.save(`course-tracker-${dateStr}.pdf`);
