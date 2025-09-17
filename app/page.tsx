@@ -115,6 +115,17 @@ export default function CourseTracker() {
 
         pdf.addImage(pageDataUrl, 'JPEG', 0, 0, imgWidth, pageImgHeightMm);
 
+        // Footer: provenance + clickable link
+        const prefix = 'Exported from Coxi Credits • ';
+        const url = 'https://coxi-credits.vercel.app/';
+        pdf.setFontSize(15);
+        pdf.setTextColor(120, 120, 120);
+        const footerY = pdfHeight - 6;
+        const totalWidth = pdf.getTextWidth(prefix + url);
+        const startX = (pdfWidth / 2) - (totalWidth / 2);
+        pdf.text(prefix, startX, footerY);
+        pdf.textWithLink(url, startX + pdf.getTextWidth(prefix), footerY, { url });
+
         yPx += sliceHeightPx;
         if (yPx < canvas.height) {
           pdf.addPage();
