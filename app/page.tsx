@@ -132,7 +132,7 @@ export default function CourseTracker() {
         }
       }
 
-      pdf.save(`course-tracker-${dateStr}.pdf`);
+      pdf.save(`coxi-credits-${dateStr}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF. Please try again.');
