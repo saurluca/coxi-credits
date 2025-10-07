@@ -225,19 +225,20 @@ export default function CourseTracker() {
   return (
     <div ref={contentRef} className="max-w-4xl mx-auto p-4 space-y-6">
 
+      <div className="bg-orange-100 border border-orange-300 rounded-lg p-6 text-center">
+        <h1 className="text-3xl font-bold text-black mb-4">Coxi Grade Calculator</h1>
+        <a href="https://docs.google.com/presentation/d/1Z9MCpDWbZTBiZc_2o6PQsPOk2LLjH4pgyAhDWan3scI/edit?slide=id.g30b09d76721_0_0#slide=id.g30b09d76721_0_0" 
+        target="_blank" rel="noopener noreferrer" className="underline text-orange-600 hover:text-orange-800 text-lg">
+          Explanation of the course system
+        </a>
+      </div>
+
       <OverallProgress
         overallProgress={overallProgress}
         totalCompletedCredits={totalCompletedCredits}
         totalRequiredCredits={totalRequiredCredits}
         currentWeightedGrade={currentWeightedGrade}
       />
-
-      <div className="text-center">
-        <a href="https://docs.google.com/presentation/d/1Z9MCpDWbZTBiZc_2o6PQsPOk2LLjH4pgyAhDWan3scI/edit?slide=id.g30b09d76721_0_0#slide=id.g30b09d76721_0_0" 
-        target="_blank" rel="noopener noreferrer" className="underline text-blue-500 hover:text-blue-700 text-lg">
-          Explanation of the course system
-        </a>
-      </div>
 
       <MandatoryArea
         mandatoryProgress={mandatoryProgress}
