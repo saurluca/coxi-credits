@@ -30,4 +30,5 @@ export interface ExportPayload {
     freeElectiveCourses: FreeElectiveCourse[];
     mathCredits: number;
     grades: Record<string, number | string>;
+    courseSelections?: Record<string, string>;
 }

@@ -16,6 +16,7 @@ export function useCourseTracker() {
     }>({ name: "", credits: "", area: "ai" })
     const [newFreeElective, setNewFreeElective] = useState({ name: "", credits: "" })
     const [grades, setGrades] = useState<Record<string, number | string>>({})
+    const [courseSelections, setCourseSelections] = useState<Record<string, string>>({})
 
     const buildExportPayload = (): ExportPayload => ({
         version: 1,
@@ -24,6 +25,7 @@ export function useCourseTracker() {
         freeElectiveCourses,
         mathCredits,
         grades,
+        courseSelections,
     })
 
     const exportDataAsJsonString = (): string => {
@@ -37,25 +39,28 @@ export function useCourseTracker() {
     const importDataFromPayload = (payload: unknown) => {
         try {
             const data = payload as Partial<ExportPayload>
-            if (!data || (data as any).version !== 1) throw new Error("Invalid version")
+            if (!data || data.version !== 1) throw new Error("Invalid version")
 
             const nextCompleted = Array.isArray(data.completedCourses) ? data.completedCourses.filter(Boolean) : []
             const nextElectives = Array.isArray(data.electiveCourses) ? data.electiveCourses : []
             const nextFree = Array.isArray(data.freeElectiveCourses) ? data.freeElectiveCourses : []
             const nextMath = typeof data.mathCredits === "number" ? data.mathCredits : 9
             const nextGrades = data.grades && typeof data.grades === "object" ? data.grades : {}
+            const nextSelections = data.courseSelections && typeof data.courseSelections === "object" ? data.courseSelections : {}
 
             setCompletedCourses(nextCompleted)
             setElectiveCourses(nextElectives)
             setFreeElectiveCourses(nextFree)
             setMathCredits(nextMath)
             setGrades(nextGrades as Record<string, number | string>)
+            setCourseSelections(nextSelections as Record<string, string>)
 
             localStorage.setItem("completedCourses", JSON.stringify(nextCompleted))
             localStorage.setItem("electiveCourses", JSON.stringify(nextElectives))
             localStorage.setItem("freeElectiveCourses", JSON.stringify(nextFree))
             localStorage.setItem("mathCredits", JSON.stringify(nextMath))
             localStorage.setItem("grades", JSON.stringify(nextGrades))
+            localStorage.setItem("courseSelections", JSON.stringify(nextSelections))
         } catch (e) {
             console.error("Failed to import data:", e)
             alert("Invalid JSON backup. Please export again and retry.")
@@ -312,18 +317,28 @@ export function useCourseTracker() {
         return result;
     }
 
+    const setCourseSelection = (courseId: string, selection: string) => {
+        setCourseSelections(prev => {
+            const newSelections = { ...prev, [courseId]: selection }
+            localStorage.setItem("courseSelections", JSON.stringify(newSelections))
+            return newSelections
+        })
+    }
+
     useEffect(() => {
         const savedCompletedCourses = localStorage.getItem("completedCourses")
         const savedElectiveCourses = localStorage.getItem("electiveCourses")
         const savedFreeElectiveCourses = localStorage.getItem("freeElectiveCourses")
         const savedGrades = localStorage.getItem("grades")
         const savedMathCredits = localStorage.getItem("mathCredits")
+        const savedCourseSelections = localStorage.getItem("courseSelections")
 
         if (savedCompletedCourses) setCompletedCourses(JSON.parse(savedCompletedCourses))
         if (savedElectiveCourses) setElectiveCourses(JSON.parse(savedElectiveCourses))
         if (savedFreeElectiveCourses) setFreeElectiveCourses(JSON.parse(savedFreeElectiveCourses))
         if (savedGrades) setGrades(JSON.parse(savedGrades))
         if (savedMathCredits) setMathCredits(JSON.parse(savedMathCredits))
+        if (savedCourseSelections) setCourseSelections(JSON.parse(savedCourseSelections))
 
         setTimeout(() => {
             console.log("Debug - All grades:", grades);
@@ -387,6 +402,7 @@ export function useCourseTracker() {
         newFreeElective,
         setNewFreeElective,
         grades,
+        courseSelections,
 
         // Actions
         toggleCourse,
@@ -400,6 +416,7 @@ export function useCourseTracker() {
         calculateWeightedGrade,
         exportDataAsJsonString,
         importDataFromPayload,
+        setCourseSelection,
 
         // Computed values
         totalMandatoryCredits,

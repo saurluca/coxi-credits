@@ -66,4 +66,31 @@ export const courses: Course[] = [
     },
 ];
 
-export const validGrades = ["-", "1.0", "1.3", "1.7", "2.0", "2.3", "2.7", "3.0", "3.3", "3.7", "4.0"]; 
+export const validGrades = ["-", "1.0", "1.3", "1.7", "2.0", "2.3", "2.7", "3.0", "3.3", "3.7", "4.0"];
+
+export const courseOptions: Record<string, string[]> = {
+    ai: [
+        "Introduction to AI and Logic Programming",
+        "Introduction to Computational Linguistics"
+    ],
+    biosys1: [
+        "Introduction to Theoretical Linguistics",
+        "Introduction to Cognitive (Neuro-) Psychology",
+        "Introduction to Animal Cognition"
+    ],
+    biosys2: [
+        "Introduction to Theoretical Linguistics",
+        "Introduction to Cognitive (Neuro-) Psychology",
+        "Introduction to Animal Cognition"
+    ],
+    neurosci1: [
+        "Introduction to Neurobiology",
+        "Sensory Physiology",
+        "Functional Neuroanatomy"
+    ],
+    neurosci2: [
+        "Introduction to Neurobiology",
+        "Sensory Physiology",
+        "Functional Neuroanatomy"
+    ]
+}; 

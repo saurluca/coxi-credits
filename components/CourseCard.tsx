@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { Course } from "@/app/types"
-import { validGrades } from "@/app/constants"
+import { validGrades, courseOptions } from "@/app/constants"
 import { getCategoryColor } from "@/app/utils/colors"
 
 interface CourseCardProps {
@@ -11,9 +11,11 @@ interface CourseCardProps {
     mathCredits: number
     isUsedInGrading: boolean
     grade?: number | string
+    selectedCourse?: string
     onToggleCourse: (courseId: string) => void
     onToggleMathCredits: () => void
     onSetGrade: (courseId: string, grade: number | string | "") => void
+    onSetCourseSelection?: (courseId: string, selection: string) => void
 }
 
 export function CourseCard({
@@ -22,10 +24,14 @@ export function CourseCard({
     mathCredits,
     isUsedInGrading,
     grade,
+    selectedCourse,
     onToggleCourse,
     onToggleMathCredits,
-    onSetGrade
+    onSetGrade,
+    onSetCourseSelection
 }: CourseCardProps) {
+    const hasCourseOptions = courseOptions[course.id] !== undefined
+    const displayName = hasCourseOptions && selectedCourse ? selectedCourse : course.name
     return (
         <Card
             className={`p-4 border-2 ${getCategoryColor(course.category)}`}
@@ -36,24 +42,46 @@ export function CourseCard({
                     checked={isCompleted}
                     onCheckedChange={() => onToggleCourse(course.id)}
                 />
-                <div className="space-y-2 flex-1">
-                    <div className="flex justify-between items-start">
-                        <label htmlFor={course.id} className="text-sm font-medium leading-none">
-                            {course.name}
-                        </label>
+                <div className="space-y-2 flex-1 min-w-0">
+                    <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1 min-w-0 max-w-full">
+                            {hasCourseOptions ? (
+                                <Select
+                                    value={selectedCourse || ""}
+                                    onValueChange={(value: string) => onSetCourseSelection?.(course.id, value)}
+                                >
+                                    <SelectTrigger className="w-full border-0 p-0 h-auto hover:bg-gray-50 rounded text-left">
+                                        <div className="text-left text-sm font-medium leading-tight break-words whitespace-normal pr-4">
+                                            {displayName}
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent position="popper" className="max-w-[300px]">
+                                        {courseOptions[course.id].map((option) => (
+                                            <SelectItem key={option} value={option} className="text-sm">
+                                                {option}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <label htmlFor={course.id} className="text-sm font-medium leading-tight break-words whitespace-normal block">
+                                    {displayName}
+                                </label>
+                            )}
+                        </div>
                         {isUsedInGrading ? (
-                            <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 mx-1">
+                            <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 whitespace-nowrap flex-shrink-0 self-start">
                                 Included
                             </span>
                         ) : (
-                            <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 mx-1">
+                            <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap flex-shrink-0 self-start">
                                 Excluded
                             </span>
                         )}
                     </div>
                     <p className="text-sm text-gray-500">
                         {course.id === "math" ? mathCredits : course.credits} ECTS
-                        {course.options && ` (${course.options} out of ${course.totalInGroup} courses)`}
+                        {course.options && course.options === 1 && ` (${course.options} out of ${course.totalInGroup} courses)`}
                     </p>
                     {course.id === "math" && (
                         <div className="flex items-center space-x-2 mt-2">

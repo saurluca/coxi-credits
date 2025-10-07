@@ -3,7 +3,6 @@ import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { OverallProgress } from "@/components/OverallProgress"
 import { MandatoryArea } from "@/components/MandatoryArea"
-import { CourseCard } from "@/components/CourseCard"
 import { ElectiveAreaCard } from "@/components/ElectiveAreaCard"
 import { AddElectiveForm } from "@/components/AddElectiveForm"
 import { FreeElectives } from "@/components/FreeElectives"
@@ -30,6 +29,7 @@ export default function CourseTracker() {
     newFreeElective,
     setNewFreeElective,
     grades,
+    courseSelections,
     toggleCourse,
     calculateAreaProgress,
     setGrade,
@@ -41,6 +41,7 @@ export default function CourseTracker() {
     calculateWeightedGrade,
     exportDataAsJsonString,
     importDataFromPayload,
+    setCourseSelection,
     totalMandatoryCredits,
     completedMandatoryCredits,
     mandatoryProgress,
@@ -244,51 +245,20 @@ export default function CourseTracker() {
         mandatoryProgress={mandatoryProgress}
         completedMandatoryCredits={completedMandatoryCredits}
         totalMandatoryCredits={totalMandatoryCredits}
+        courses={courses}
+        completedCourses={completedCourses}
+        mathCredits={mathCredits}
+        electiveCourses={electiveCourses}
+        topGradedAreas={topGradedAreas}
+        grades={grades}
+        courseSelections={courseSelections}
+        toggleCourse={toggleCourse}
+        toggleMathCredits={toggleMathCredits}
+        setGrade={setGrade}
+        setCourseSelection={setCourseSelection}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {courses.map((course) => {
-          let isUsedInGrading = false;
-
-          if (course.id === "stats") {
-            isUsedInGrading = true;
-          }
-
-          if (course.id === "math") {
-            const mathElectives = electiveCourses.filter(course => course.area === "math");
-            isUsedInGrading = mathElectives.length > 0 && mathCredits === 9;
-          }
-
-          if (course.id === "cs") {
-            const csElectives = electiveCourses.filter(course => course.area === "cs");
-            isUsedInGrading = csElectives.length > 0;
-          }
-
-          if (["ai", "philosophy", "psychology"].includes(course.category)) {
-            isUsedInGrading = topGradedAreas.includes(course.category);
-          }
-
-          if (course.id === "cog") {
-            isUsedInGrading = false;
-          }
-
-          return (
-            <CourseCard
-              key={course.id}
-              course={course}
-              isCompleted={completedCourses.includes(course.id)}
-              mathCredits={mathCredits}
-              isUsedInGrading={isUsedInGrading}
-              grade={grades[course.id]}
-              onToggleCourse={toggleCourse}
-              onToggleMathCredits={toggleMathCredits}
-              onSetGrade={setGrade}
-            />
-          );
-        })}
-      </div>
-
-      <div className="bg-gray-100 p-6 rounded-lg border">
+      <div className="bg-indigo-50 p-6 rounded-lg border">
         <h2 className="text-xl font-semibold text-center mb-4">Mandatory Electives (60 ECTS required)</h2>
         <div className="space-y-2">
           <div className="bg-white p-2 rounded">
