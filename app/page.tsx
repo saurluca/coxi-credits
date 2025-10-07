@@ -15,6 +15,9 @@ import html2canvas from 'html2canvas'
 export default function CourseTracker() {
   const [isExporting, setIsExporting] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
+  const [isUploadOpen, setIsUploadOpen] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
 
   const {
     completedCourses,
@@ -36,6 +39,8 @@ export default function CourseTracker() {
     removeFreeElectiveCourse,
     toggleMathCredits,
     calculateWeightedGrade,
+    exportDataAsJsonString,
+    importDataFromPayload,
     totalMandatoryCredits,
     completedMandatoryCredits,
     mandatoryProgress,
@@ -48,6 +53,60 @@ export default function CourseTracker() {
     totalRequiredCredits,
     overallProgress
   } = useCourseTracker()
+
+  const handleExportJson = () => {
+    try {
+      const json = exportDataAsJsonString()
+      const blob = new Blob([json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0]
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `coxi-credits-${dateStr}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('JSON export failed:', e)
+      alert('Failed to export JSON.')
+    }
+  }
+
+  const openUploadModal = () => {
+    setSelectedFile(null)
+    setIsUploadOpen(true)
+  }
+
+  const closeUploadModal = () => {
+    if (isImporting) return
+    setIsUploadOpen(false)
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0]
+    setSelectedFile(file || null)
+  }
+
+  const handleConfirmImport = async () => {
+    if (!selectedFile) {
+      alert('Please choose a JSON file.')
+      return
+    }
+    setIsImporting(true)
+    try {
+      const text = await selectedFile.text()
+      const parsed = JSON.parse(text)
+      importDataFromPayload(parsed)
+      setIsUploadOpen(false)
+    } catch (e) {
+      console.error('Import failed:', e)
+      alert('Failed to import JSON. Please check the file and try again.')
+    } finally {
+      setIsImporting(false)
+    }
+  }
 
   const exportToPDF = async () => {
     if (!contentRef.current) return;
@@ -290,17 +349,48 @@ export default function CourseTracker() {
       />
 
       <footer className="mt-12 py-4 border-t text-center text-sm text-gray-500">
-        <div className="flex justify-center mb-2">
-          <Button
-            onClick={exportToPDF}
-            disabled={isExporting}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            {isExporting ? "Exporting..." : "📄 Export to PDF"}
-          </Button>
+        <div className="flex flex-col items-center gap-3 mb-2">
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button
+              onClick={exportToPDF}
+              disabled={isExporting}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isExporting ? "Exporting..." : "📄 Export to PDF"}
+            </Button>
+            <Button
+              onClick={handleExportJson}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              🧾 Export JSON
+            </Button>
+            <Button
+              onClick={openUploadModal}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              ⬆️ Upload JSON
+            </Button>
+          </div>
+          <p className="text-xs text-gray-500 max-w-xl">JSON export is for backup and transfer. You can upload the same JSON later to restore all courses, credits, and grades.</p>
         </div>
         <p>Created by Luca Saur • Email: mail@lucasaur • <a href="https://github.com/saurluca/coxi-credits" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">GitHub</a></p>
       </footer>
+
+      {isUploadOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 space-y-4">
+            <h3 className="text-lg font-semibold">Upload JSON backup</h3>
+            <p className="text-sm text-gray-600">Selecting a backup will overwrite your current settings and data on this device.</p>
+            <input type="file" accept="application/json" onChange={handleFileChange} />
+            <div className="flex justify-end gap-2 pt-2">
+              <Button onClick={closeUploadModal} variant="outline" disabled={isImporting}>Cancel</Button>
+              <Button onClick={handleConfirmImport} className="bg-amber-600 hover:bg-amber-700 text-white" disabled={!selectedFile || isImporting}>
+                {isImporting ? "Importing..." : "Confirm Import"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

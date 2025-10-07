@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { ElectiveCourse, FreeElectiveCourse, Course } from "@/app/types"
+import { ElectiveCourse, FreeElectiveCourse, Course, ExportPayload } from "@/app/types"
 import { areaNames, courses } from "@/app/constants"
 
 export function useCourseTracker() {
@@ -16,6 +16,51 @@ export function useCourseTracker() {
     }>({ name: "", credits: "", area: "ai" })
     const [newFreeElective, setNewFreeElective] = useState({ name: "", credits: "" })
     const [grades, setGrades] = useState<Record<string, number | string>>({})
+
+    const buildExportPayload = (): ExportPayload => ({
+        version: 1,
+        completedCourses,
+        electiveCourses,
+        freeElectiveCourses,
+        mathCredits,
+        grades,
+    })
+
+    const exportDataAsJsonString = (): string => {
+        try {
+            return JSON.stringify(buildExportPayload())
+        } catch {
+            return "{}"
+        }
+    }
+
+    const importDataFromPayload = (payload: unknown) => {
+        try {
+            const data = payload as Partial<ExportPayload>
+            if (!data || (data as any).version !== 1) throw new Error("Invalid version")
+
+            const nextCompleted = Array.isArray(data.completedCourses) ? data.completedCourses.filter(Boolean) : []
+            const nextElectives = Array.isArray(data.electiveCourses) ? data.electiveCourses : []
+            const nextFree = Array.isArray(data.freeElectiveCourses) ? data.freeElectiveCourses : []
+            const nextMath = typeof data.mathCredits === "number" ? data.mathCredits : 9
+            const nextGrades = data.grades && typeof data.grades === "object" ? data.grades : {}
+
+            setCompletedCourses(nextCompleted)
+            setElectiveCourses(nextElectives)
+            setFreeElectiveCourses(nextFree)
+            setMathCredits(nextMath)
+            setGrades(nextGrades as Record<string, number | string>)
+
+            localStorage.setItem("completedCourses", JSON.stringify(nextCompleted))
+            localStorage.setItem("electiveCourses", JSON.stringify(nextElectives))
+            localStorage.setItem("freeElectiveCourses", JSON.stringify(nextFree))
+            localStorage.setItem("mathCredits", JSON.stringify(nextMath))
+            localStorage.setItem("grades", JSON.stringify(nextGrades))
+        } catch (e) {
+            console.error("Failed to import data:", e)
+            alert("Invalid JSON backup. Please export again and retry.")
+        }
+    }
 
     const toggleCourse = (courseId: string) => {
         setCompletedCourses((prev) => {
@@ -353,6 +398,8 @@ export function useCourseTracker() {
         removeFreeElectiveCourse,
         toggleMathCredits,
         calculateWeightedGrade,
+        exportDataAsJsonString,
+        importDataFromPayload,
 
         // Computed values
         totalMandatoryCredits,

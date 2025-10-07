@@ -22,3 +22,12 @@ export interface FreeElectiveCourse {
     name: string;
     credits: number;
 } 
+
+export interface ExportPayload {
+    version: 1;
+    completedCourses: string[];
+    electiveCourses: ElectiveCourse[];
+    freeElectiveCourses: FreeElectiveCourse[];
+    mathCredits: number;
+    grades: Record<string, number | string>;
+}
