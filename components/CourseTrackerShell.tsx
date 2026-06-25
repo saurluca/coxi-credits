@@ -2,6 +2,7 @@
 
 import { useRef, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
+import { SiteFooter } from "@/components/SiteFooter";
 import { BachelorView } from "@/components/BachelorView";
 import { MasterView } from "@/components/MasterView";
 import { Program } from "@/app/types";
@@ -14,6 +15,7 @@ import {
   writeActiveProgram,
 } from "@/lib/storage";
 import { getErrorMessage, reportClientError } from "@/lib/errors";
+import { SITE_URL } from "@/lib/site";
 
 export function CourseTrackerShell() {
   const program = useSyncExternalStore(
@@ -155,7 +157,7 @@ export function CourseTrackerShell() {
         pdf.addImage(pageDataUrl, "JPEG", 0, 0, imgWidth, pageImgHeightMm);
 
         const prefix = "Exported from Coxi Credits • ";
-        const url = "https://coxi-credits.vercel.app/";
+        const url = `${SITE_URL}/`;
         pdf.setFontSize(15);
         pdf.setTextColor(120, 120, 120);
         const footerY = pdfHeight - 6;
@@ -245,52 +247,37 @@ export function CourseTrackerShell() {
         )}
       </div>
 
-      <footer className="mt-12 py-4 border-t text-center text-sm text-gray-500">
-        <div className="flex flex-col items-center gap-3 mb-2">
-          <div className="flex flex-wrap justify-center gap-2">
-            <Button
-              onClick={runExportPdf}
-              disabled={isExporting}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {isExporting ? "Exporting..." : "📄 Export to PDF"}
-            </Button>
-            <Button
-              onClick={handleExportJson}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              🧾 Export JSON
-            </Button>
-            <Button
-              onClick={openUploadModal}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              ⬆️ Upload JSON
-            </Button>
-          </div>
-          <p className="text-xs text-gray-500 max-w-xl">
-            JSON export includes both Bachelor and Master data. Legacy
-            Bachelor-only backups (version 1) are still supported on import.
-          </p>
-        </div>
-        <p>
-          Created by Luca Saur • Email: mail@lucasaur •{" "}
-          <a
-            href="https://github.com/saurluca/coxi-credits"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:underline"
-          >
-            GitHub
-          </a>
-        </p>
-        <p className="mt-4 text-xs text-gray-400 max-w-2xl mx-auto">
-          This tool is not affiliated with, endorsed by, or officially connected
-          to the University of Osnabrück (Universität Osnabrück). All
-          calculations and grade estimates are provided for informational
-          purposes only; no guarantee is given for their accuracy.
-        </p>
-      </footer>
+      <SiteFooter
+        actions={
+          <>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button
+                onClick={runExportPdf}
+                disabled={isExporting}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isExporting ? "Exporting..." : "📄 Export to PDF"}
+              </Button>
+              <Button
+                onClick={handleExportJson}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                🧾 Export JSON
+              </Button>
+              <Button
+                onClick={openUploadModal}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                ⬆️ Upload JSON
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500 max-w-xl">
+              JSON export includes both Bachelor and Master data. Legacy
+              Bachelor-only backups (version 1) are still supported on import.
+            </p>
+          </>
+        }
+      />
 
       {isUploadOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
