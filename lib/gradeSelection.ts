@@ -19,6 +19,39 @@ export function getNumericGrade(
   return null;
 }
 
+/** Picks courses until maxCredits is reached; best grades first, then insertion order. */
+export function selectCoursesForCreditCap(
+  courses: CreditCourse[],
+  grades: Record<string, number | string>,
+  maxCredits: number,
+): { selected: CreditCourse[]; selectedIds: Set<string> } {
+  const withIndex = courses.map((course, index) => ({ ...course, index }));
+  const sorted = [...withIndex].sort((a, b) => {
+    const gradeA = getNumericGrade(grades, a.id);
+    const gradeB = getNumericGrade(grades, b.id);
+    if (gradeA !== null && gradeB !== null && gradeA !== gradeB) {
+      return gradeA - gradeB;
+    }
+    if (gradeA !== null && gradeB === null) return -1;
+    if (gradeA === null && gradeB !== null) return 1;
+    return a.index - b.index;
+  });
+
+  const selected: CreditCourse[] = [];
+  const selectedIds = new Set<string>();
+  let used = 0;
+
+  for (const course of sorted) {
+    if (used + course.credits <= maxCredits) {
+      selected.push(course);
+      selectedIds.add(course.id);
+      used += course.credits;
+    }
+  }
+
+  return { selected, selectedIds };
+}
+
 /** Picks graded courses with the best grades until maxCredits is reached. */
 export function selectBestCoursesForGrading(
   courses: CreditCourse[],

@@ -1,12 +1,18 @@
 "use client";
 
+import { Progress } from "@/components/ui/progress";
 import { OverallProgress } from "@/components/OverallProgress";
 import { MandatoryArea } from "@/components/MandatoryArea";
 import { ElectiveAreaCard } from "@/components/ElectiveAreaCard";
 import { AddElectiveForm } from "@/components/AddElectiveForm";
 import { FreeElectives } from "@/components/FreeElectives";
 import { useCourseTracker } from "@/hooks/useCourseTracker";
-import { areaNames, courses } from "@/app/constants";
+import {
+  areaNames,
+  bachelorAreaMaxCredits,
+  BACHELOR_MANDATORY_ELECTIVE_CAP,
+  courses,
+} from "@/app/constants";
 import { getCategoryColor } from "@/app/utils/colors";
 
 interface BachelorViewProps {
@@ -28,6 +34,8 @@ export function BachelorView({ isExporting = false }: BachelorViewProps) {
     courseSelections,
     toggleCourse,
     calculateAreaProgress,
+    calculateAreaTotalCredits,
+    getAreaCountedCourseIds,
     setGrade,
     addElectiveCourse,
     addFreeElectiveCourse,
@@ -40,15 +48,18 @@ export function BachelorView({ isExporting = false }: BachelorViewProps) {
     completedMandatoryCredits,
     mandatoryProgress,
     totalElectiveCredits,
+    cappedElectiveCredits,
     electiveProgress,
     maxFreeElectiveCredits,
     totalFreeElectiveCredits,
+    cappedFreeElectiveCredits,
     freeElectiveProgress,
     totalCompletedCredits,
     totalRequiredCredits,
     overallProgress,
     electiveCourseIdsUsedInGrading,
     electiveGradingCapExceeded,
+    getFreeElectiveCountedCourseIds,
   } = useCourseTracker();
 
   const currentWeightedGrade = calculateWeightedGrade();
@@ -91,36 +102,35 @@ export function BachelorView({ isExporting = false }: BachelorViewProps) {
 
       <div className="bg-indigo-50 p-6 rounded-lg border">
         <h2 className="text-xl font-semibold text-center mb-4">
-          Mandatory Electives (60 ECTS required)
+          Mandatory Electives ({BACHELOR_MANDATORY_ELECTIVE_CAP} ECTS required)
         </h2>
-        <div className="space-y-2">
-          <div className="bg-white p-2 rounded">
-            <div className="flex justify-between items-center text-sm">
-              <span>Progress</span>
-              <span>
-                {totalElectiveCredits} of 60 ECTS completed (
-                {Math.round(electiveProgress)}%)
+        <div className="space-y-2 mb-4">
+          <Progress value={Math.min(electiveProgress, 100)} className="h-2" />
+          <p className="text-sm text-center text-gray-600">
+            {cappedElectiveCredits} of {BACHELOR_MANDATORY_ELECTIVE_CAP} ECTS
+            counted ({Math.round(electiveProgress)}%)
+            {totalElectiveCredits > BACHELOR_MANDATORY_ELECTIVE_CAP && (
+              <span className="text-amber-700 font-medium">
+                {" "}
+                · {totalElectiveCredits} registered
               </span>
-            </div>
-            {totalElectiveCredits > 60 && (
-              <p className="text-xs text-amber-600 font-semibold mt-1">
-                (Only 60 ECTS counted toward total; best grades used for
-                average)
-              </p>
             )}
-          </div>
+          </p>
+          {totalElectiveCredits > BACHELOR_MANDATORY_ELECTIVE_CAP && (
+            <p className="text-xs text-center text-amber-600 font-semibold">
+              Extra courses stay listed for your records; only{" "}
+              {BACHELOR_MANDATORY_ELECTIVE_CAP} ECTS count toward the total.
+              Best grades are used for the average.
+            </p>
+          )}
         </div>
 
         <div className="mt-4 space-y-4">
           {(Object.keys(areaNames) as Array<keyof typeof areaNames>).map(
             (area) => {
-              const maxCredits =
-                area === "foundation"
-                  ? 4
-                  : area === "cs" || area === "math"
-                    ? 9
-                    : 48;
+              const maxCredits = bachelorAreaMaxCredits[area];
               const areaProgress = calculateAreaProgress(area);
+              const totalRegisteredCredits = calculateAreaTotalCredits(area);
 
               return (
                 <ElectiveAreaCard
@@ -128,12 +138,14 @@ export function BachelorView({ isExporting = false }: BachelorViewProps) {
                   title={areaNames[area]}
                   areaKey={area}
                   areaProgress={areaProgress}
+                  totalRegisteredCredits={totalRegisteredCredits}
                   maxCredits={maxCredits}
                   electiveCourses={electiveCourses}
                   colorClass={getCategoryColor(area)}
                   grades={grades}
                   onSetGrade={setGrade}
                   onRemoveCourse={removeElectiveCourse}
+                  countedCourseIds={getAreaCountedCourseIds(area)}
                   gradingCourseIds={electiveCourseIdsUsedInGrading}
                   gradingCapExceeded={electiveGradingCapExceeded}
                   isExporting={isExporting}
@@ -170,9 +182,11 @@ export function BachelorView({ isExporting = false }: BachelorViewProps) {
       <FreeElectives
         title={`Free Electives (${maxFreeElectiveCredits} ECTS possible)`}
         maxFreeElectiveCredits={maxFreeElectiveCredits}
+        cappedFreeElectiveCredits={cappedFreeElectiveCredits}
         totalFreeElectiveCredits={totalFreeElectiveCredits}
         freeElectiveProgress={freeElectiveProgress}
         freeElectiveCourses={freeElectiveCourses}
+        countedCourseIds={getFreeElectiveCountedCourseIds()}
         newFreeElective={newFreeElective}
         onNewFreeElectiveChange={(field, value) => {
           if (field === "name" || field === "credits") {

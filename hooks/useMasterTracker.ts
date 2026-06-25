@@ -8,7 +8,6 @@ import {
 } from "@/app/types";
 import {
   masterAreaMaxCredits,
-  masterAreaNames,
   masterFocusAreas,
   MASTER_CREDITS,
   STUDY_PROJECT_PARTS,
@@ -20,6 +19,7 @@ import {
   addGradedCoursesToAverage,
   getNumericGrade,
   selectBestCoursesForGrading,
+  selectCoursesForCreditCap,
   weightedAverage,
 } from "@/lib/gradeSelection";
 
@@ -54,10 +54,31 @@ export function useMasterTracker() {
     grade: "",
   });
 
-  const calculateAreaProgress = (area: MasterArea) =>
+  const calculateAreaTotalCredits = (area: MasterArea) =>
     mandatoryElectives
       .filter((course) => course.area === area)
       .reduce((sum, course) => sum + course.credits, 0);
+
+  const getAreaCountedCourseIds = (area: MasterArea): Set<string> => {
+    const areaCourses = mandatoryElectives.filter(
+      (course) => course.area === area,
+    );
+    return selectCoursesForCreditCap(
+      areaCourses,
+      grades,
+      masterAreaMaxCredits[area],
+    ).selectedIds;
+  };
+
+  const calculateAreaProgress = (area: MasterArea) => {
+    const areaCourses = mandatoryElectives.filter(
+      (course) => course.area === area,
+    );
+    const countedIds = getAreaCountedCourseIds(area);
+    return areaCourses
+      .filter((course) => countedIds.has(course.id))
+      .reduce((sum, course) => sum + course.credits, 0);
+  };
 
   const specializations = masterFocusAreas.filter(
     (area) => calculateAreaProgress(area) >= MASTER_CREDITS.specializationMin,
@@ -150,16 +171,6 @@ export function useMasterTracker() {
     const newCredits = Number.parseInt(newCourse.credits, 10);
     if (newCredits < 1 || newCredits > 30) {
       alert("Credits must be between 1 and 30");
-      return;
-    }
-
-    const areaCredits = calculateAreaProgress(newCourse.area);
-    const maxCredits = masterAreaMaxCredits[newCourse.area];
-
-    if (areaCredits + newCredits > maxCredits) {
-      alert(
-        `Cannot add course. Maximum of ${maxCredits} ECTS credits allowed for ${masterAreaNames[newCourse.area]}. Current credits: ${areaCredits}`,
-      );
       return;
     }
 
@@ -264,6 +275,11 @@ export function useMasterTracker() {
   const mandatoryElectiveCourseIdsUsedInGrading = new Set(
     gradingMandatoryElectives.map((course) => course.id),
   );
+  const mandatoryElectiveCourseIdsUsedInProgress = selectCoursesForCreditCap(
+    mandatoryElectives,
+    grades,
+    MASTER_CREDITS.mandatoryElective,
+  ).selectedIds;
 
   const calculateCourseworkGrade = (): number | null => {
     let weightedSum = 0;
@@ -323,12 +339,11 @@ export function useMasterTracker() {
     (sum, c) => sum + c.credits,
     0,
   );
-  const cappedMandatoryElectiveCredits = Math.min(
-    totalMandatoryElectiveCredits,
-    MASTER_CREDITS.mandatoryElective,
-  );
+  const cappedMandatoryElectiveCredits = mandatoryElectives
+    .filter((course) => mandatoryElectiveCourseIdsUsedInProgress.has(course.id))
+    .reduce((sum, course) => sum + course.credits, 0);
   const mandatoryElectiveProgress =
-    (totalMandatoryElectiveCredits / MASTER_CREDITS.mandatoryElective) * 100;
+    (cappedMandatoryElectiveCredits / MASTER_CREDITS.mandatoryElective) * 100;
   const mandatoryElectiveGradingCapExceeded =
     totalMandatoryElectiveCredits > MASTER_CREDITS.mandatoryElective;
 
@@ -336,12 +351,18 @@ export function useMasterTracker() {
     (sum, c) => sum + c.credits,
     0,
   );
-  const cappedFreeElectiveCredits = Math.min(
-    totalFreeElectiveCredits,
+  const freeElectiveCourseIdsUsedInProgress = selectCoursesForCreditCap(
+    freeElectives,
+    grades,
     MASTER_CREDITS.freeElective,
-  );
+  ).selectedIds;
+  const cappedFreeElectiveCredits = freeElectives
+    .filter((course) => freeElectiveCourseIdsUsedInProgress.has(course.id))
+    .reduce((sum, course) => sum + course.credits, 0);
   const freeElectiveProgress =
-    (totalFreeElectiveCredits / MASTER_CREDITS.freeElective) * 100;
+    (cappedFreeElectiveCredits / MASTER_CREDITS.freeElective) * 100;
+  const freeElectiveCapExceeded =
+    totalFreeElectiveCredits > MASTER_CREDITS.freeElective;
 
   const thesisCompleted = thesis.completed;
   const completedThesisCredits = thesisCompleted ? THESIS.credits : 0;
@@ -372,6 +393,8 @@ export function useMasterTracker() {
     toggleStudyProjectPart,
     toggleThesis,
     calculateAreaProgress,
+    calculateAreaTotalCredits,
+    getAreaCountedCourseIds,
     setGrade,
     setThesisGrade,
     addMandatoryElective,
@@ -390,6 +413,7 @@ export function useMasterTracker() {
     totalFreeElectiveCredits,
     cappedFreeElectiveCredits,
     freeElectiveProgress,
+    getFreeElectiveCountedCourseIds: () => freeElectiveCourseIdsUsedInProgress,
     thesisCompleted,
     completedThesisCredits,
     totalCompletedCredits,

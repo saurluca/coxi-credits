@@ -1,14 +1,20 @@
 import { useState, useEffect } from "react";
 import { ElectiveCourse, FreeElectiveCourse, Course } from "@/app/types";
-import { areaNames, courses } from "@/app/constants";
+import {
+  areaNames,
+  bachelorAreaMaxCredits,
+  BACHELOR_MANDATORY_ELECTIVE_CAP,
+  courses,
+} from "@/app/constants";
 import { STORAGE_KEYS } from "@/lib/storage";
 import {
   addGradedCoursesToAverage,
   selectBestCoursesForGrading,
+  selectCoursesForCreditCap,
   weightedAverage,
 } from "@/lib/gradeSelection";
 
-const BACHELOR_MANDATORY_ELECTIVE_CAP = 60;
+type BachelorArea = keyof typeof areaNames;
 
 export function useCourseTracker() {
   const [completedCourses, setCompletedCourses] = useState<string[]>([]);
@@ -46,10 +52,33 @@ export function useCourseTracker() {
     });
   };
 
-  const calculateAreaProgress = (area: keyof typeof areaNames) => {
+  const calculateAreaTotalCredits = (area: BachelorArea) => {
     if (area === "foundation") return 0;
     return electiveCourses
       .filter((course) => course.area === area)
+      .reduce((sum, course) => sum + course.credits, 0);
+  };
+
+  const getAreaCountedCourseIds = (area: BachelorArea): Set<string> => {
+    if (area === "foundation") return new Set();
+    const areaCourses = electiveCourses.filter(
+      (course) => course.area === area,
+    );
+    return selectCoursesForCreditCap(
+      areaCourses,
+      grades,
+      bachelorAreaMaxCredits[area],
+    ).selectedIds;
+  };
+
+  const calculateAreaProgress = (area: BachelorArea) => {
+    if (area === "foundation") return 0;
+    const areaCourses = electiveCourses.filter(
+      (course) => course.area === area,
+    );
+    const countedIds = getAreaCountedCourseIds(area);
+    return areaCourses
+      .filter((course) => countedIds.has(course.id))
       .reduce((sum, course) => sum + course.credits, 0);
   };
 
@@ -87,30 +116,6 @@ export function useCourseTracker() {
 
     if (newCredits < 1 || newCredits > 30) {
       alert("Credits must be between 1 and 30");
-      return;
-    }
-
-    const areaCredits = calculateAreaProgress(
-      newCourse.area as keyof typeof areaNames,
-    );
-
-    let maxCredits;
-    switch (newCourse.area) {
-      case "foundation":
-        maxCredits = 4;
-        break;
-      case "cs":
-      case "math":
-        maxCredits = 9;
-        break;
-      default:
-        maxCredits = 48;
-    }
-
-    if (areaCredits + newCredits > maxCredits) {
-      alert(
-        `Cannot add course. Maximum of ${maxCredits} ECTS credits allowed for ${areaNames[newCourse.area]}. Current credits: ${areaCredits}`,
-      );
       return;
     }
 
@@ -250,6 +255,11 @@ export function useCourseTracker() {
   const electiveCourseIdsUsedInGrading = new Set(
     gradingElectives.map((course) => course.id),
   );
+  const electiveCourseIdsUsedInProgress = selectCoursesForCreditCap(
+    electiveCourses,
+    grades,
+    BACHELOR_MANDATORY_ELECTIVE_CAP,
+  ).selectedIds;
 
   const calculateWeightedGrade = () => {
     let weightedSum = 0;
@@ -431,26 +441,31 @@ export function useCourseTracker() {
     (sum, course) => sum + course.credits,
     0,
   );
+  const cappedElectiveCredits = electiveCourses
+    .filter((course) => electiveCourseIdsUsedInProgress.has(course.id))
+    .reduce((sum, course) => sum + course.credits, 0);
   const electiveProgress =
-    (totalElectiveCredits / BACHELOR_MANDATORY_ELECTIVE_CAP) * 100;
+    (cappedElectiveCredits / BACHELOR_MANDATORY_ELECTIVE_CAP) * 100;
   const maxFreeElectiveCredits = mathCredits === 6 ? 36 : 33;
   const totalFreeElectiveCredits = freeElectiveCourses.reduce(
     (sum, course) => sum + course.credits,
     0,
   );
+  const freeElectiveCourseIdsUsedInProgress = selectCoursesForCreditCap(
+    freeElectiveCourses,
+    grades,
+    maxFreeElectiveCredits,
+  ).selectedIds;
+  const cappedFreeElectiveCredits = freeElectiveCourses
+    .filter((course) => freeElectiveCourseIdsUsedInProgress.has(course.id))
+    .reduce((sum, course) => sum + course.credits, 0);
   const freeElectiveProgress =
-    (totalFreeElectiveCredits / maxFreeElectiveCredits) * 100;
+    (cappedFreeElectiveCredits / maxFreeElectiveCredits) * 100;
 
-  const cappedElectiveCredits = Math.min(
-    totalElectiveCredits,
-    BACHELOR_MANDATORY_ELECTIVE_CAP,
-  );
   const electiveGradingCapExceeded =
     totalElectiveCredits > BACHELOR_MANDATORY_ELECTIVE_CAP;
-  const cappedFreeElectiveCredits = Math.min(
-    totalFreeElectiveCredits,
-    maxFreeElectiveCredits,
-  );
+  const freeElectiveCapExceeded =
+    totalFreeElectiveCredits > maxFreeElectiveCredits;
   const totalCompletedCredits =
     completedMandatoryCredits +
     cappedElectiveCredits +
@@ -478,6 +493,8 @@ export function useCourseTracker() {
     // Actions
     toggleCourse,
     calculateAreaProgress,
+    calculateAreaTotalCredits,
+    getAreaCountedCourseIds,
     setGrade,
     addElectiveCourse,
     addFreeElectiveCourse,
@@ -488,6 +505,10 @@ export function useCourseTracker() {
     setCourseSelection,
     electiveCourseIdsUsedInGrading,
     electiveGradingCapExceeded,
+    cappedElectiveCredits,
+    cappedFreeElectiveCredits,
+    freeElectiveCapExceeded,
+    getFreeElectiveCountedCourseIds: () => freeElectiveCourseIdsUsedInProgress,
 
     // Computed values
     totalMandatoryCredits,

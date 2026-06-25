@@ -1,5 +1,6 @@
 "use client";
 
+import { Progress } from "@/components/ui/progress";
 import { OverallProgress } from "@/components/OverallProgress";
 import { MasterMandatoryArea } from "@/components/MasterMandatoryArea";
 import { ElectiveAreaCard } from "@/components/ElectiveAreaCard";
@@ -59,6 +60,8 @@ export function MasterView({ isExporting = false }: MasterViewProps) {
     toggleStudyProjectPart,
     toggleThesis,
     calculateAreaProgress,
+    calculateAreaTotalCredits,
+    getAreaCountedCourseIds,
     setGrade,
     setThesisGrade,
     addMandatoryElective,
@@ -75,11 +78,14 @@ export function MasterView({ isExporting = false }: MasterViewProps) {
     mandatoryElectiveProgress,
     totalFreeElectiveCredits,
     freeElectiveProgress,
+    cappedFreeElectiveCredits,
+    getFreeElectiveCountedCourseIds,
     totalCompletedCredits,
     totalRequiredCredits,
     overallProgress,
     mandatoryElectiveCourseIdsUsedInGrading,
     mandatoryElectiveGradingCapExceeded,
+    cappedMandatoryElectiveCredits,
   } = useMasterTracker();
 
   const masterAreas = masterAreaOrder.map((area) => ({
@@ -141,35 +147,42 @@ export function MasterView({ isExporting = false }: MasterViewProps) {
           (max {MASTER_CREDITS.specializationMax} per area). At most two
           specializations.
         </p>
-        <div className="space-y-2">
-          <div className="bg-white p-2 rounded">
-            <div className="flex justify-between items-center text-sm">
-              <span>Progress</span>
-              <span>
-                {totalMandatoryElectiveCredits} of{" "}
-                {MASTER_CREDITS.mandatoryElective} ECTS completed (
-                {Math.round(mandatoryElectiveProgress)}%)
-              </span>
-            </div>
+        <div className="space-y-2 mb-4">
+          <Progress
+            value={Math.min(mandatoryElectiveProgress, 100)}
+            className="h-2"
+          />
+          <p className="text-sm text-center text-gray-600">
+            {cappedMandatoryElectiveCredits} of{" "}
+            {MASTER_CREDITS.mandatoryElective} ECTS counted (
+            {Math.round(mandatoryElectiveProgress)}%)
             {totalMandatoryElectiveCredits >
               MASTER_CREDITS.mandatoryElective && (
-              <p className="text-xs text-amber-600 font-semibold mt-1">
-                (Only {MASTER_CREDITS.mandatoryElective} ECTS counted toward
-                total; best grades used for average)
-              </p>
+              <span className="text-amber-700 font-medium">
+                {" "}
+                · {totalMandatoryElectiveCredits} registered
+              </span>
             )}
-            {focusSpecializationCount > 2 && (
-              <p className="text-xs text-amber-600 font-semibold mt-1">
-                More than 2 focus areas reach {MASTER_CREDITS.specializationMin}
-                + ECTS — at most 2 specializations allowed
-              </p>
-            )}
-          </div>
+          </p>
+          {totalMandatoryElectiveCredits > MASTER_CREDITS.mandatoryElective && (
+            <p className="text-xs text-center text-amber-600 font-semibold">
+              Extra courses stay listed for your records; only{" "}
+              {MASTER_CREDITS.mandatoryElective} ECTS count toward the total.
+              Best grades are used for the average.
+            </p>
+          )}
+          {focusSpecializationCount > 2 && (
+            <p className="text-xs text-center text-amber-600 font-semibold">
+              More than 2 focus areas reach {MASTER_CREDITS.specializationMin}+
+              ECTS — at most 2 specializations allowed
+            </p>
+          )}
         </div>
 
         <div className="mt-4 space-y-4">
           {masterAreaOrder.map((area) => {
             const areaProgress = calculateAreaProgress(area);
+            const totalRegisteredCredits = calculateAreaTotalCredits(area);
             const maxCredits = masterAreaMaxCredits[area];
             const badge = getSpecializationBadge(
               area,
@@ -183,12 +196,14 @@ export function MasterView({ isExporting = false }: MasterViewProps) {
                 title={masterAreaNames[area]}
                 areaKey={area}
                 areaProgress={areaProgress}
+                totalRegisteredCredits={totalRegisteredCredits}
                 maxCredits={maxCredits}
                 electiveCourses={mandatoryElectives}
                 colorClass={getMasterAreaColor(area)}
                 grades={grades}
                 onSetGrade={setGrade}
                 onRemoveCourse={removeMandatoryElective}
+                countedCourseIds={getAreaCountedCourseIds(area)}
                 gradingCourseIds={mandatoryElectiveCourseIdsUsedInGrading}
                 gradingCapExceeded={mandatoryElectiveGradingCapExceeded}
                 badgeText={badge.text}
@@ -225,9 +240,11 @@ export function MasterView({ isExporting = false }: MasterViewProps) {
       <FreeElectives
         title={`Free Elective Area / Profilbildender Wahlbereich (${MASTER_CREDITS.freeElective} ECTS)`}
         maxFreeElectiveCredits={MASTER_CREDITS.freeElective}
+        cappedFreeElectiveCredits={cappedFreeElectiveCredits}
         totalFreeElectiveCredits={totalFreeElectiveCredits}
         freeElectiveProgress={freeElectiveProgress}
         freeElectiveCourses={freeElectives}
+        countedCourseIds={getFreeElectiveCountedCourseIds()}
         newFreeElective={newFreeElective}
         onNewFreeElectiveChange={(field, value) => {
           setNewFreeElective({ ...newFreeElective, [field]: value });

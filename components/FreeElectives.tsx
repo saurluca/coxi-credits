@@ -20,9 +20,11 @@ interface FreeElectiveItem {
 interface FreeElectivesProps {
   title: string;
   maxFreeElectiveCredits: number;
+  cappedFreeElectiveCredits: number;
   totalFreeElectiveCredits: number;
   freeElectiveProgress: number;
   freeElectiveCourses: FreeElectiveItem[];
+  countedCourseIds?: ReadonlySet<string>;
   newFreeElective: {
     name: string;
     credits: string;
@@ -44,9 +46,11 @@ interface FreeElectivesProps {
 export function FreeElectives({
   title,
   maxFreeElectiveCredits,
+  cappedFreeElectiveCredits,
   totalFreeElectiveCredits,
   freeElectiveProgress,
   freeElectiveCourses,
+  countedCourseIds,
   newFreeElective,
   onNewFreeElectiveChange,
   onAddFreeElective,
@@ -56,72 +60,102 @@ export function FreeElectives({
   showGradedToggle = false,
   isExporting = false,
 }: FreeElectivesProps) {
+  const capExceeded = totalFreeElectiveCredits > maxFreeElectiveCredits;
+
   return (
     <div className="bg-green-100 p-6 rounded-lg border border-green-200">
       <h2 className="text-xl font-semibold text-center mb-4">{title}</h2>
       <div className="space-y-2">
         <Progress value={Math.min(freeElectiveProgress, 100)} className="h-2" />
         <p className="text-sm text-center text-gray-600">
-          {totalFreeElectiveCredits} of {maxFreeElectiveCredits} ECTS completed
-          ({Math.round(freeElectiveProgress)}%)
-          {totalFreeElectiveCredits > maxFreeElectiveCredits && (
-            <span className="text-amber-600 font-semibold ml-1">
-              (Only {maxFreeElectiveCredits} ECTS counted toward total)
+          {cappedFreeElectiveCredits} of {maxFreeElectiveCredits} ECTS counted (
+          {Math.round(freeElectiveProgress)}%)
+          {capExceeded && (
+            <span className="text-amber-700 font-medium">
+              {" "}
+              · {totalFreeElectiveCredits} registered
             </span>
           )}
         </p>
+        {capExceeded && (
+          <p className="text-xs text-center text-amber-600 font-semibold">
+            Extra courses stay listed for your records; only{" "}
+            {maxFreeElectiveCredits} ECTS count toward the total.
+          </p>
+        )}
       </div>
 
       <div className="mt-4 space-y-2">
-        {freeElectiveCourses.map((course) => (
-          <div
-            key={course.id}
-            className="flex justify-between items-center bg-white p-2 rounded"
-          >
-            <div className="flex flex-col">
-              <span>{course.name}</span>
-              {showGradedToggle && course.graded === false && (
-                <span className="text-xs text-gray-500">Passed (ungraded)</span>
-              )}
+        {freeElectiveCourses.map((course) => {
+          const countsTowardTotal = countedCourseIds?.has(course.id) ?? true;
+
+          return (
+            <div
+              key={course.id}
+              className={`flex justify-between items-center bg-white p-2 rounded ${
+                capExceeded && !countsTowardTotal ? "opacity-80" : ""
+              }`}
+            >
+              <div className="flex flex-col gap-0.5">
+                <span>{course.name}</span>
+                {showGradedToggle && course.graded === false && (
+                  <span className="text-xs text-gray-500">
+                    Passed (ungraded)
+                  </span>
+                )}
+                {capExceeded && (
+                  <span
+                    className={
+                      countsTowardTotal
+                        ? "text-xs text-green-700 font-medium"
+                        : "text-xs text-amber-700 font-medium"
+                    }
+                  >
+                    {countsTowardTotal
+                      ? "Counted toward total"
+                      : "Not counted (cap reached)"}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span>{course.credits} ECTS</span>
+                {showGradedToggle && course.graded && onSetGrade && (
+                  <Select
+                    value={grades[course.id]?.toString() || "-"}
+                    onValueChange={(value: string) =>
+                      onSetGrade(
+                        course.id,
+                        value === "-" ? value : parseFloat(value),
+                      )
+                    }
+                  >
+                    <SelectTrigger className="w-24">
+                      <div className="flex-1 text-left">
+                        {grades[course.id]?.toString() || "-"}
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent position="popper">
+                      {validGrades.map((grade) => (
+                        <SelectItem key={grade} value={grade}>
+                          {grade}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {!isExporting && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onRemoveFreeElective(course.id)}
+                  >
+                    <Trash2 />
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span>{course.credits} ECTS</span>
-              {showGradedToggle && course.graded && onSetGrade && (
-                <Select
-                  value={grades[course.id]?.toString() || "-"}
-                  onValueChange={(value: string) =>
-                    onSetGrade(
-                      course.id,
-                      value === "-" ? value : parseFloat(value),
-                    )
-                  }
-                >
-                  <SelectTrigger className="w-24">
-                    <div className="flex-1 text-left">
-                      {grades[course.id]?.toString() || "-"}
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent position="popper">
-                    {validGrades.map((grade) => (
-                      <SelectItem key={grade} value={grade}>
-                        {grade}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              {!isExporting && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => onRemoveFreeElective(course.id)}
-                >
-                  <Trash2 />
-                </Button>
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {!isExporting && (
