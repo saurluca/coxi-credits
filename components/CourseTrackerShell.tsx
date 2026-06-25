@@ -284,6 +284,12 @@ export function CourseTrackerShell() {
             GitHub
           </a>
         </p>
+        <p className="mt-4 text-xs text-gray-400 max-w-2xl mx-auto">
+          This tool is not affiliated with, endorsed by, or officially connected
+          to the University of Osnabrück (Universität Osnabrück). All
+          calculations and grade estimates are provided for informational
+          purposes only; no guarantee is given for their accuracy.
+        </p>
       </footer>
 
       {isUploadOpen && (
