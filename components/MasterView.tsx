@@ -99,18 +99,6 @@ export function MasterView({ isExporting = false }: MasterViewProps) {
 
   return (
     <div className="space-y-6">
-      <div
-        role="status"
-        className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm text-amber-900"
-      >
-        <span className="font-semibold uppercase tracking-wide">
-          Experimental
-        </span>
-        <span className="mx-2">·</span>
-        Master (CS24) tracking is new and may not yet match the official
-        Prüfungsordnung — please verify credits and grades independently.
-      </div>
-
       <OverallProgress
         title="Overall Progress (Master CS24)"
         overallProgress={overallProgress}
