@@ -31,8 +31,8 @@ export default function DatenschutzPage() {
           &ldquo;Coxi Credits&rdquo; (
           <a href={SITE_URL}>coxi-credits.vercel.app</a>) is a free,
           non-commercial online tool for tracking study progress and estimating
-          grades in the Cognitive Science program (Bachelor and Master CS24) at
-          the University of Osnabrück.
+          grades in the Cognitive Science program (Bachelor and Master) at the
+          University of Osnabrück.
         </p>
         <p>
           There is no registration and no user account. Your study data

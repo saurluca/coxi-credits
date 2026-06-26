@@ -39,13 +39,13 @@ export const MASTER_CREDITS = {
 export const STUDY_PROJECT_PARTS = [
   {
     id: "study-project-part-1",
-    name: "Study Project Part 1 (CS24-MP-SP)",
+    name: "Study Project Part 1",
     credits: 12,
     semester: 1,
   },
   {
     id: "study-project-part-2",
-    name: "Study Project Part 2 (CS24-MP-SP)",
+    name: "Study Project Part 2",
     credits: 12,
     semester: 2,
   },

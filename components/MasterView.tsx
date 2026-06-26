@@ -100,7 +100,7 @@ export function MasterView({ isExporting = false }: MasterViewProps) {
   return (
     <div className="space-y-6">
       <OverallProgress
-        title="Overall Progress (Master CS24)"
+        title="Overall Progress (Master)"
         overallProgress={overallProgress}
         totalCompletedCredits={totalCompletedCredits}
         totalRequiredCredits={totalRequiredCredits}

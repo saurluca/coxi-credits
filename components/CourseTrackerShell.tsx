@@ -223,7 +223,7 @@ export function CourseTrackerShell() {
                 : "text-gray-700 hover:bg-orange-50"
             }`}
           >
-            Master (CS24)
+            Master
           </button>
         </div>
 
@@ -235,7 +235,7 @@ export function CourseTrackerShell() {
         >
           {program === "bachelor"
             ? "Explanation of the course system"
-            : "Master CS24 program structure (PO Nov 2025)"}
+            : "Master program structure"}
         </a>
       </div>
 
